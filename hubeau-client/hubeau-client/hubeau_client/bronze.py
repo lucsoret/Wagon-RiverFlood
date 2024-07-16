@@ -9,6 +9,7 @@ def extract():
     data = requests.get(uri).json()["data"]
     df = pandas.DataFrame(data)
     print(df)
+    print(df.columns.values)
     return df
 
 def load(data):
