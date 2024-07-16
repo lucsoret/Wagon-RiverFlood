@@ -2,3 +2,5 @@
 **/.venv
 **/env/**
 **/env
+.idea
+logs
