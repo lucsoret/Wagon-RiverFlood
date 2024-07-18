@@ -8,7 +8,11 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.12, <3.13"
 apache-airflow = "^2.9.3"
-
+requests = "^2.32.3"
+google-cloud = "^0.34.0"
+google-cloud-bigquery = "^3.25.0"
+pandas = "^2.2.2"
+apache-beam = {extras = ["gcp"], version = "^2.40.0"}
 
 [build-system]
 requires = ["poetry-core"]
