@@ -36,6 +36,9 @@ jobs:
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
           REMOTE_REPO_PATH: ${{ secrets.REMOTE_REPO_PATH }}
           REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
+          AIRFLOW_UID: ${{ secrets.AIRFLOW_UID }}
+          _AIRFLOW_WWW_USER_USERNAME: ${{ secrets.AIRFLOW_WWW_USER_USERNAME }}
+          _AIRFLOW_WWW_USER_PASSWORD: ${{ secrets.AIRFLOW_WWW_USER_PASSWORD }}
 
         run: |
           ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST -p $REMOTE_PORT << 'EOF'
