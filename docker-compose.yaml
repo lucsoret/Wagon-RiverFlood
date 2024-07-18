@@ -266,17 +266,5 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
-  git-sync:
-    image: k8s.gcr.io/git-sync/git-sync:v3.6.5
-    volumes:
-      - gitdags:/tmp/git
-    environment:
-      - GIT_SYNC_REPO=https://github.com/lucsoret/Wagon-RiverFlood
-      - GIT_SYNC_SSH=false
-      - GIT_SYNC_WAIT=60
-      - GIT_SYNC_BRANCH=main
-      - GIT_SYNC_PERMISSIONS=0777
-
 volumes:
   postgres-db-volume:
-  gitdags:
