@@ -3,7 +3,7 @@ FROM apache/airflow:2.9.3
 # Switch to root user
 USER root
 
-# Install gcc and other necessary build tools
+# Install gcc and other necessary build tools ( /!\ Mandatory for apache airflow packages)
 RUN apt-get update && apt-get install -y gcc python3-dev
 
 # Install Poetry
