@@ -13,6 +13,7 @@ client = storage.Client()
 
 class FetchHubeauData(beam.DoFn):
     def process(self, element):
+        print("Test update")
         now = datetime.now(timezone.utc)
         one_hour_ago = now - timedelta(hours=4)
         date_debut_obs = one_hour_ago.strftime('%Y-%m-%dT%H:%M:%SZ')
