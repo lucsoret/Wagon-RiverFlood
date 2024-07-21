@@ -13,7 +13,9 @@ client = storage.Client()
 
 class FetchHubeauData(beam.DoFn):
     def process(self, element):
-        print("Test update")
+        import requests
+        from datetime import datetime, timedelta, timezone
+
         now = datetime.now(timezone.utc)
         one_hour_ago = now - timedelta(hours=4)
         date_debut_obs = one_hour_ago.strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -22,7 +24,6 @@ class FetchHubeauData(beam.DoFn):
         url = f"https://hubeau.eaufrance.fr/api/v1/hydrometrie/observations_tr?code_entite=O972001001&date_debut_obs={date_debut_obs}"
 
         response = requests.get(url)
-        print(response)
         if response.status_code >= 200 & response.status_code < 300 :
             data = response.json()
             print(data)
@@ -33,9 +34,9 @@ class FetchHubeauData(beam.DoFn):
 
 
 def write_to_gcs(element, gcs_path):
-    print(element)
-
-    print(gcs_path)
+    from apache_beam.io.gcp.gcsio import GcsIO
+    from datetime import datetime, timedelta, timezone
+    import json
     gcsio = GcsIO()
     file_name = f"{gcs_path}/hubeau_data_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.json"
     with gcsio.open(file_name, 'w') as f:
@@ -44,30 +45,37 @@ def write_to_gcs(element, gcs_path):
 
 
 class ReadFromGCSAndInsertIntoBigQuery(beam.DoFn):
+    from datetime import datetime, timedelta, timezone
+    from apache_beam.io.gcp.gcsio import GcsIO
     def __init__(self, gcs_path, bigquery_table):
         self.gcs_path = gcs_path
         self.bigquery_table = bigquery_table
 
     def process(self, element):
+        from datetime import datetime, timedelta, timezone
+        from apache_beam.io.gcp.gcsio import GcsIO
+        import json
+
         ingestion_timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         gcsio = GcsIO()
         with gcsio.open(element, 'r') as f:
             data = json.loads(f.read().decode('utf-8'))
-
+        if not data:
+            return []
         for record in data['data']:
             record['ingestion_timestamp'] = ingestion_timestamp
-
-            print(record)
             yield record
 
 def run():
+    import apache_beam as beam
+    from apache_beam.options.pipeline_options import PipelineOptions
+    from apache_beam.io.gcp.bigquery import WriteToBigQuery
     #datasets/raw/diary-entries
     gcs_temp = "gs://riverflood-lewagon-dev-temp/hubeau_data"
     gcs_path = 'gs://riverflood-lewagon-dev/hubeau_data'
     bigquery_table = 'riverflood-lewagon:river_observations.hubeau_observations'
 
     options = PipelineOptions()
-
     p = beam.Pipeline(options=options)
 
     fetched_data = (
@@ -75,13 +83,6 @@ def run():
         | 'Create' >> beam.Create([None])
         | 'Fetch Hubeau Data' >> beam.ParDo(FetchHubeauData())
     )
-
-    fetched_data = (
-            fetched_data
-            | 'Print' >> beam.Map(print)
-            #| 'Store in bigquery'
-        )
-
 
     gcs_files = (
         fetched_data
@@ -105,6 +106,12 @@ def run():
 
 
 class FetchFromAPI(beam.DoFn):
+    from apache_beam.options.pipeline_options import PipelineOptions
+    from google.cloud import storage
+    from apache_beam.io.gcp.gcsio import GcsIO
+    from apache_beam.io.gcp.bigquery import WriteToBigQuery
+    from datetime import datetime, timedelta, timezone
+
     def process(self, element):
         lasthour = datetime.now(timezone.utc) - timedelta(hours=6)
         print( lasthour.isoformat().replace("+00:00", "Z"))
@@ -122,7 +129,7 @@ class FetchFromAPI(beam.DoFn):
             yield None
 
 def sendToGcp(temp_file_path):
-    print(temp_file_path)
+    from datetime import datetime
 
     bucket_name = "riverflood-lewagon-dev"
 
@@ -131,12 +138,15 @@ def sendToGcp(temp_file_path):
     year, month, day, hour = today.strftime("%Y"), today.strftime("%m"), today.strftime("%d"), today.strftime("%H")
     target_gcs_path = f"datasets/raw/diary-entries/{year}/{month}/{day}/observation-{hour}.json"
     bucket = client.get_bucket(bucket_name)
-    breakpoint()
     blob = bucket.blob(target_gcs_path)
     blob.upload_from_filename(temp_file_path)
     return target_gcs_path
 
 def readFromGcp(blob_path):
+    import apache_beam as beam
+    from apache_beam.io.gcp.gcsio import GcsIO
+    from apache_beam.io.gcp.bigquery import WriteToBigQuery
+
     print(blob_path)
 
     bucket_name = "riverflood-lewagon-dev"
@@ -148,52 +158,6 @@ def readFromGcp(blob_path):
     jsonfile = blob.read(temp_file_path)
     return target_gcs_path
 
-
-
-def run_old(
-    interval=15
-):
-    options = beam.options.pipeline_options.PipelineOptions()
-
-    with beam.Pipeline(options=options) as pipeline:
-
-        # data section
-        ids = [1]  # Example IDs
-        temp_file_path = "tempFile"
-        data = (
-            pipeline
-            | 'Create IDs' >> beam.Create(ids)
-            | 'Fetch Data from API' >> beam.ParDo(FetchFromAPI())
-            #| 'Print Results' >> beam.Map(print)
-
-
-        )
-
-        out = (
-            data
-            | 'write output' >> beam.io.textio.WriteToText(temp_file_path, file_name_suffix='.json')
-            | 'Send Results' >> beam.Map(sendToGcp)
-        )
-
-        query = (
-            out
-            | 'Query storage' >> beam.Map(print)
-            #| 'Store in bigquery'
-        )
-
-
-
-        #            | 'Print Results' >> beam.Map(print)
-
-        #bucket_name = "riverflood-lewagon-dev"
-
-        # data  | 'Print in Terminal 2' >> beam.Map(print)
-        #today = datetime.today()
-        #year, month, day = today.strftime("%Y"), today.strftime("%m"), today.strftime("%d")
-        #target_gcs_path = f"datasets/raw/diary-entries/{year}/{month}/{day}/observation.json"
-        #bucket = client.get_bucket(bucket_name)
-        #blob = bucket.blob(target_gcs_path)
-        #blob.upload_from_filename(temp_file_path)
 
 if __name__ == "__main__":
 
