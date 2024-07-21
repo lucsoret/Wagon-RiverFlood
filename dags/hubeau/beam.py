@@ -75,7 +75,13 @@ def run():
         | 'Fetch Hubeau Data' >> beam.ParDo(FetchHubeauData())
     )
 
-    breakpoint()
+    fetched_data = (
+            fetched_data
+            | 'Print' >> beam.Map(print)
+            #| 'Store in bigquery'
+        )
+
+
     gcs_files = (
         fetched_data
         | 'Write to GCS' >> beam.ParDo(write_to_gcs, gcs_path=gcs_path)
