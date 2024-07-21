@@ -15,6 +15,7 @@ requests = "^2.32.3"
 google-cloud = "^0.34.0"
 pandas = ">=2.1.2,<2.2"
 google-cloud-bigquery = ">=3.4.0,<3.21.0"
+ipdb = "^0.13.13"
 
 
 [build-system]
