@@ -8,6 +8,7 @@ from google.cloud import storage
 from airflow.operators.python import PythonOperator
 from hubeau.historical import extract, load
 from airflow.decorators import task
+from airflow.providers.google.cloud.hooks.gcs import GCSHook
 
 CODE_ENTITE = "K*"
 client = storage.Client()
@@ -31,15 +32,23 @@ def extract(date_start = pendulum.now()):
 
 @task
 def load(data, date_start):
+    gcs_hook = GCSHook(gcp_conn_id='google_cloud_default')
+
     bucket_name =  os.environ.get("GCP_BUCKET_NAME", "riverflood-lewagon-dev")
     gcs_path_root = 'hubeau_data_historical'
     year, month, day = date_start.split('-')
 
     target_gcs_path = f"{gcs_path_root}/{year}/{month}/{day}/obs_elab_{date_start}.json"
-    bucket = client.get_bucket(bucket_name)
-    blob = bucket.blob(target_gcs_path)
     json_data = json.dumps(data)
-    blob.upload_from_string(json_data, content_type='application/json')
+    gcs_hook.upload(
+        bucket_name=bucket_name,
+        object_name=target_gcs_path,
+        data=json_data
+    )
+
+    #bucket = client.get_bucket(bucket_name)
+    #blob = bucket.blob(target_gcs_path)
+    #blob.upload_from_string(json_data, content_type='application/json')
     print("Data succesfully Loaded")
 
 # Define the DAG
