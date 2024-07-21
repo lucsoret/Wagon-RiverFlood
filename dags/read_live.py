@@ -1,13 +1,9 @@
 import os
 import pendulum
-import json
 
 import pandas as pd
 from airflow import DAG
-from airflow.operators.bash import BashOperator
-from airflow.operators.python import PythonOperator
 from airflow.providers.google.cloud.operators.dataflow import DataflowCreatePythonJobOperator
-from datetime import datetime
 
 with DAG(
     "live_ingestion",
