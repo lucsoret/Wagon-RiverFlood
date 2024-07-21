@@ -40,7 +40,6 @@ def write_to_gcs(element, gcs_path):
     file_name = f"{gcs_path}/hubeau_data_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.json"
     with gcsio.open(file_name, 'w') as f:
         f.write(json.dumps(element).encode('utf-8'))
-    breakpoint()
     return [file_name]
 
 
@@ -68,6 +67,7 @@ def run():
     bigquery_table = 'riverflood-lewagon:river_observations.hubeau_observations'
 
     options = PipelineOptions()
+
     p = beam.Pipeline(options=options)
 
     fetched_data = (

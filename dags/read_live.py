@@ -27,5 +27,6 @@ with DAG(
             'temp_location': 'gs://riverflood-lewagon-dev-temp/dataflow/staging',
             'runner': 'DataflowRunner',
             'job_name': 'live-ingestion-job-{{ ds_nodash }}',
+            'requirements_file': '/opt/airflow/requirements.txt'
         }
     )
