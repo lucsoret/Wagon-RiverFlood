@@ -7,7 +7,6 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-apache-airflow = "^2.7.4"
 apache-airflow-providers-apache-beam = "^5.7.1"
 apache-beam = {extras = ["gcp"], version = "^2.40.0"}
 requests = "^2.32.3"
@@ -16,6 +15,7 @@ pandas = ">=2.1.2,<2.2"
 google-cloud-bigquery = ">=3.4.0,<3.21.0"
 ipdb = "^0.13.13"
 apache-airflow-providers-google = "^10.21.0"
+apache-airflow = "2.7.3"
 
 
 [build-system]
