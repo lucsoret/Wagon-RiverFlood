@@ -8,7 +8,7 @@ from airflow.providers.google.cloud.operators.dataflow import DataflowCreatePyth
 with DAG(
     "live_ingestion",
     description="Live ingestion of Hub'Eau Hydrometrie API",
-    schedule_interval='0 */4 * * *',
+    schedule_interval= '0 */4 * * *',
     catchup=True,
     start_date=pendulum.today("UTC").add(days=-1),
     default_args = {"depends_on_past": False}
