@@ -6,7 +6,6 @@ import requests
 import json
 from google.cloud import storage
 from airflow.operators.python import PythonOperator
-from hubeau.historical import extract, load
 from airflow.decorators import task
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 
