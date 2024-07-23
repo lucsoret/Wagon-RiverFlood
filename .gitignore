@@ -5,4 +5,4 @@
 .idea
 logs
 __pycache__/
-*.secrets.toml
+.streamlit/secrets.toml
