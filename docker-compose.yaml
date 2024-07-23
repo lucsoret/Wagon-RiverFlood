@@ -26,6 +26,7 @@
 #
 # Feel free to modify this file to suit your needs.
 ---
+
 x-airflow-common:
   &airflow-common
   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
@@ -68,6 +69,22 @@ x-airflow-common:
       condition: service_healthy
 
 services:
+  streamlit:
+    build:
+      context: .
+      dockerfile: dockerfile_streamlit
+    restart: always
+    volumes:
+      - ./.streamlit:/app/.streamlit/
+      - ./dashboards:/app/dashboards/
+
+    command: ["streamlit", "run", "dashboards/advanced.py"]
+    ports:
+      - 8501:8501
+    stdin_open: true # eq. to -i in docker run (allows breakpoints)
+    tty: true # eq. to -t in docker run (allows breakpoints)
+    env_file:
+      - .env
   postgres:
     image: postgres:13
     environment:
