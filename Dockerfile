@@ -22,6 +22,9 @@ RUN apt-get remove -y gcc python3-dev && apt-get autoremove -y && apt-get clean
 COPY pyproject.toml .
 COPY poetry.lock .
 
+# Fix permissions for /usr/local/bin
+RUN sudo chown -R airflow /usr/local/bin
+
 USER airflow
 # Install Poetry
 RUN pip install poetry
