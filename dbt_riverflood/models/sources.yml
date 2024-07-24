@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: gcs_source
+    tables:
+      - name: external_table
+        external:
+          location: "gs://{{ GCP_BUCKET_NAME }}/hubeau_data_historical/*.json"
+          format: "JSON"

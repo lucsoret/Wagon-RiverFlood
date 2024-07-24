@@ -47,7 +47,7 @@ def load(data, date_start = pendulum.now()):
         gcs_path_root = 'hubeau_data_historical'
         year, month, day = date_start.split('-')
 
-        target_gcs_path = f"{gcs_path_root}/{year}/{month}/{day}/obs_elab_{date_start}.json"
+        target_gcs_path = f"{gcs_path_root}/{year}/obs_elab_{date_start}.json"
         json_data = json.dumps(data)
         gcs_hook.upload(
             bucket_name=bucket_name,
