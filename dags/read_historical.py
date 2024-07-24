@@ -4,14 +4,87 @@ import pendulum
 import os
 import requests
 import json
+import yaml
 from google.cloud import storage
+from google.cloud import bigquery
 from airflow.operators.python import PythonOperator
 from airflow.decorators import task
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
+from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 
-CODE_ENTITE = "K*"
-client = storage.Client()
 temp_file_path = "tempFile"
+bucket_name =  os.environ.get("GCP_BUCKET_NAME", "riverflood-lewagon-dev")
+dataset_id = os.environ.get("GCP_DATASET", 'river_observation_multiregion')
+table_id = os.environ.get("GCP_TABLE_HISTORICAL_BRONZE", 'hubeau_historical')
+
+gcs_hook = GCSHook(gcp_conn_id='google_cloud_default')
+bq_hook = BigQueryHook(gcp_conn_id='google_cloud_default', use_legacy_sql=False)
+client_gcs = gcs_hook.get_conn()
+client_bq = bq_hook.get_conn()
+
+
+@task
+def create_bq_table_if_not_exists():
+    with open(
+        os.path.join(
+            os.getcwd(),
+            "bigquery", "historical_bronze_schema.yml"), 'r'
+    ) as file:
+        schema = yaml.safe_load(file)
+
+    # Convert schema into BigQuery SchemaField format
+    schema_fields = [
+        bigquery.SchemaField(field['name'], field['type'], mode=field['mode'], description=field['description'], fields=[
+            bigquery.SchemaField(sub_field['name'], sub_field['type'], mode=sub_field['mode'], description=sub_field['description'])
+            for sub_field in field.get('fields', [])
+        ]) if field['type'] == 'RECORD' else bigquery.SchemaField(field['name'], field['type'], mode=field['mode'], description=field['description'])
+        for field in schema
+    ]
+
+    table_ref = client_bq.dataset(dataset_id).table(table_id)
+
+    try:
+        table = client_bq.get_table(table_ref)
+        print(f"Table {table_id} already exists.")
+    except:
+        # Table does not exist, create it
+        table = bigquery.Table(table_ref, schema=schema_fields)
+        table = client_bq.create_table(table)
+        print(f"Created table {table_id}.")
+
+@task
+def check_json_in_table(json_file):
+    query_str = f"""
+        SELECT * FROM `{dataset_id}.{table_id}`
+        where json_file = '{json_file}'
+        """
+    query_job = client_bq.query(query_str)  # Make an API request.
+    results = query_job.result()  # Wait for the query to finish
+    ar = [r for r in results]
+    L = len(ar)
+    if L >= 1:
+        if len(ar) >= 1:
+            print(f'[WARNING] JSON file {json_file} has {L} entry in the db')
+        print(f'JSON file {json_file} already exists in the db... skipped')
+        return False
+    return True
+
+
+@task
+def load_gcs_to_bq(gcs_path):
+
+    job_config = bigquery.LoadJobConfig(
+        source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+        autodetect=False,  # Set to False since we are providing schema
+    )
+    uri = f"gs://{bucket_name}/{gcs_path}"
+    load_job = client_bq.load_table_from_uri(
+        uri, f"{dataset_id}.{table_id}", job_config=job_config
+    )
+    load_job.result()  # Waits for the job to complete.
+    destination_table = client_bq.get_table(f"{dataset_id}.{table_id}")
+    print(f"Loaded {destination_table.num_rows} rows into {dataset_id}:{table_id}.")
+
 
 @task
 def extract(date_start = pendulum.now()):
@@ -33,29 +106,24 @@ def extract(date_start = pendulum.now()):
 
         params["size"] = size
         response = requests.get(base_url, params=params)
-        return response.json()
+        js = response.json()
+        js["json_file"] = f'obs_elab_{date_start}.json'
+        return js
     else:
         response.raise_for_status()
 
-
 @task
-def load(data, date_start = pendulum.now()):
+def load_to_gcs(data, date_start = pendulum.now()):
     if data:
-        gcs_hook = GCSHook(gcp_conn_id='google_cloud_default')
-
-        bucket_name =  os.environ.get("GCP_BUCKET_NAME", "riverflood-lewagon-dev")
         gcs_path_root = 'hubeau_data_historical'
         year, month, day = date_start.split('-')
-
-        target_gcs_path = f"{gcs_path_root}/{year}/obs_elab_{date_start}.json"
+        target_gcs_path = f"{gcs_path_root}/{year}/{data['json_file']}"
         json_data = json.dumps(data)
-        gcs_hook.upload(
-            bucket_name=bucket_name,
-            object_name=target_gcs_path,
-            data=json_data
-        )
 
-        print("Data succesfully Loaded")
+        bucket = client_gcs.get_bucket(bucket_name)
+        blob = bucket.blob(target_gcs_path)
+        blob.upload_from_string(json_data)
+        return target_gcs_path
 
 
 # Define the DAG
@@ -64,8 +132,16 @@ with DAG(
     description="Historical ingestion of Hub'Eau Hydrometrie API",
     schedule_interval= '@daily',
     catchup=True,
-    start_date=pendulum.today("UTC").add(days=365),
+    start_date=pendulum.today("UTC").add(days=7),
     default_args = {"depends_on_past": False}
 )  as dag:
     extract_task = extract('{{ ds }}')
-    load_task = load(extract_task, '{{ ds }}')
+    load_task = load_to_gcs(extract_task, '{{ ds }}')
+
+    create_bq_table_task = create_bq_table_if_not_exists()
+    check_json_task = check_json_in_table(load_task)
+    load_gcs_task = load_gcs_to_bq(load_task)
+
+    # Task dependencies
+    create_bq_table_task >> extract_task >> load_task >> check_json_task
+    check_json_task >> load_gcs_task
