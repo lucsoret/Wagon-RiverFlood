@@ -34,11 +34,12 @@ def extract(date_start = pendulum.now()):
         params["size"] = size
         response = requests.get(base_url, params=params)
         print(f"count [{size}]  | size [{len(response.json()['data'])}]")
+        breakpoint()
         return response.json()
     else:
         response.raise_for_status()
 
-def load(data, date_start = pendulum.now()):
+def json_to_gcs(data, date_start = pendulum.now()):
     if data:
         bucket_name =  os.environ.get("GCP_BUCKET_NAME", "riverflood-lewagon-dev")
         gcs_path_root = 'hubeau_data_historical'
@@ -51,9 +52,11 @@ def load(data, date_start = pendulum.now()):
         blob = bucket.blob(target_gcs_path)
         blob.upload_from_string(json_data)
 
+#def gcs_to_bq(fuck_you, data_start = pendulum.now())
+
 
 if __name__ == "__main__":
     for tdelta in range(365):
         dt = (datetime.today() - timedelta(days=tdelta)).strftime('%Y-%m-%d')
         j = extract(dt)
-        load(j, date_start=dt)
+        json_to_gcs(j, date_start=dt)
