@@ -67,6 +67,8 @@ x-airflow-common:
       condition: service_healthy
     postgres:
       condition: service_healthy
+  env_file:
+    - .env
 
 services:
   streamlit:

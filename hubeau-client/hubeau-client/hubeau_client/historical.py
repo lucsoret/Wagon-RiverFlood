@@ -133,7 +133,7 @@ def gcs_to_bq(gcs_path):
             load_gcs_to_bq(gcs_path)
 
 if __name__ == "__main__":
-    for tdelta in range(3):
+    for tdelta in range(7):
 
         dt = (datetime.today() - timedelta(days=tdelta)).strftime('%Y-%m-%d')
         js = extract(dt)
