@@ -6,8 +6,9 @@
 WITH top_perc AS (
   SELECT
     code_station,
-    PERCENTILE_CONT(resultat_obs_elab, 0.99)
-      OVER (PARTITION BY code_station) AS quantile_99
+    grandeur_hydro_elab,
+    PERCENTILE_CONT(resultat_obs_elab, 0.99) OVER (PARTITION BY code_station) AS quantile_99,
+    PERCENTILE_CONT(resultat_obs_elab, 0.90) OVER (PARTITION BY code_station) AS quantile_90
   FROM
     `riverflood-lewagon.river_observation_dev.hubeau_historical_bronze`
   WHERE
@@ -16,8 +17,11 @@ WITH top_perc AS (
 
 SELECT
   code_station,
-  AVG(quantile_99) AS quantile_99
+  grandeur_hydro_elab,
+  AVG(quantile_99) AS quantile_99,
+  AVG(quantile_90) AS quantile_90
 FROM
   top_perc
 GROUP BY
-  code_station
+  code_station,
+  grandeur_hydro_elab
