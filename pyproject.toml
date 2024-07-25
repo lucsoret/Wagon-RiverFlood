@@ -17,6 +17,10 @@ ipdb = "^0.13.13"
 apache-airflow-providers-google = "^10.21.0"
 apache-airflow = "2.7.3"
 google-auth = "^2.32.0"
+streamlit = "^1.36.0"
+streamlit-folium = "^0.22.0"
+dbt = "^1.0.0.38.6"
+dbt-bigquery = "^1.8.2"
 
 
 [build-system]
