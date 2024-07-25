@@ -23,7 +23,7 @@ client_bq = bigquery.Client(credentials=credentials, project=credentials_info['p
 temp_file_path = "tempFile"
 bucket_name =  os.environ.get("GCP_BUCKET_NAME", "riverflood-lewagon-dev")
 dataset_id = os.environ.get("GCP_DATASET", 'river_observation_multiregion')
-table_id = os.environ.get("GCP_TABLE_HISTORICAL_BRONZE", 'hubeau_historical')
+table_id = os.environ.get("GCP_TABLE_HISTORICAL_RAW", 'hubeau_historical')
 
 def create_bq_table_if_not_exists():
     with open(
