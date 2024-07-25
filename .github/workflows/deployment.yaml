@@ -22,7 +22,7 @@ jobs:
       - name: Sync files with rsync
         uses: burnett01/rsync-deployments@7.0.1
         with:
-          switches: -avzr --delete --exclude .env
+          switches: -avzr --delete --exclude='.git' --exclude-from='.gitignore'
           path: ./
           remote_path: ${{ secrets.REMOTE_REPO_PATH }}
           remote_host: ${{ secrets.REMOTE_HOST }}
