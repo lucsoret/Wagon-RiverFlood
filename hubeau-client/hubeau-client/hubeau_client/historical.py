@@ -84,11 +84,12 @@ def load_gcs_to_bq(gcs_path):
     print(f"Loaded {destination_table.num_rows} rows into {dataset_id}:{table_id}.")
 
 
-def extract(date_start = pendulum.now()):
+def extract(date_start, param='QmJ'):
     base_url = "https://hubeau.eaufrance.fr/api/v1/hydrometrie/obs_elab"
     params = {
     "date_debut_obs_elab": date_start,
     "date_fin_obs_elab": date_start,
+    'grandeur_hydro_elab': param,
     "size": 1
     }
     response = requests.get(base_url, params=params)
@@ -104,7 +105,7 @@ def extract(date_start = pendulum.now()):
         params["size"] = size
         response = requests.get(base_url, params=params)
         js = response.json()
-        js["json_file"] = f'obs_elab_{date_start}.json'
+        js["json_file"] = f'obs_elab_{param}_{date_start}.json'
         return js
     else:
         response.raise_for_status()
@@ -133,10 +134,9 @@ def gcs_to_bq(gcs_path):
             load_gcs_to_bq(gcs_path)
 
 if __name__ == "__main__":
-    for tdelta in range(7):
-
-        dt = (datetime.today() - timedelta(days=tdelta)).strftime('%Y-%m-%d')
-        js = extract(dt)
-
-        gcs_path = load_to_gcs(js, date_start=dt)
-        gcs_to_bq(gcs_path)
+    for tdelta in range(365):
+        for param in ['QmJ', 'QmM']:
+            dt = (datetime.today() - timedelta(days=tdelta)).strftime('%Y-%m-%d')
+            js = extract(dt, param=param)
+            gcs_path = load_to_gcs(js, date_start=dt)
+            gcs_to_bq(gcs_path)

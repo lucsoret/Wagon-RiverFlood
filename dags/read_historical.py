@@ -96,11 +96,12 @@ def load_gcs_to_bq(gcs_path):
 
 
 @task
-def extract(date_start = pendulum.now()):
+def extract(date_start, param='QmJ'):
     base_url = "https://hubeau.eaufrance.fr/api/v1/hydrometrie/obs_elab"
     params = {
     "date_debut_obs_elab": date_start,
     "date_fin_obs_elab": date_start,
+    'grandeur_hydro_elab': param,
     "size": 1
     }
     response = requests.get(base_url, params=params)
@@ -116,7 +117,7 @@ def extract(date_start = pendulum.now()):
         params["size"] = size
         response = requests.get(base_url, params=params)
         js = response.json()
-        js["json_file"] = f'obs_elab_{date_start}.json'
+        js["json_file"] = f'obs_elab_{param}_{date_start}.json'
         return js
     else:
         response.raise_for_status()
@@ -128,7 +129,7 @@ def load_to_gcs(data, date_start = pendulum.now()):
         gcs_path_root = 'hubeau_data_historical'
         year, month, day = date_start.split('-')
 
-        target_gcs_path = f"{gcs_path_root}/{year}/obs_elab_{date_start}.json"
+        target_gcs_path = f"{gcs_path_root}/{year}/{data['json_file']}"
         json_data = json.dumps(data)
         gcs_hook.upload(
             bucket_name=bucket_name,
