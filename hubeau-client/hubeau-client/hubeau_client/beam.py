@@ -61,7 +61,7 @@ def run():
     #datasets/raw/diary-entries
     gcs_temp = "gs://riverflood-lewagon-dev-temp/hubeau_data"
     gcs_path = 'gs://riverflood-lewagon-dev/hubeau_data'
-    bigquery_table = 'riverflood-lewagon:river_observations.hubeau_observations'
+    bigquery_table = 'riverflood-lewagon:river_observation_dev.hubeau_observations_bronze'
 
     options = PipelineOptions()
     p = beam.Pipeline(options=options)
