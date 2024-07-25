@@ -25,7 +25,9 @@ with DAG(
     end_task = EmptyOperator(
         task_id='end',
     )
-    for model in ["hubeau_historical_bronze", "hubeau_historical_silver"]:
-        dbt_run_task = make_dbt_task(model, "run")
-        dbt_test_task = make_dbt_task(model, "test")
-        start_task >> dbt_run_task >> dbt_test_task >> end_task
+    dbt_run_bronze_task = make_dbt_task("hubeau_historical_bronze", "run")
+    dbt_test_bronze_task = make_dbt_task("hubeau_historical_bronze", "test")
+    dbt_run_silver_task = make_dbt_task("hubeau_historical_silver", "run")
+    dbt_test_silver_task = make_dbt_task("hubeau_historical_silver", "test")
+
+    start_task >> dbt_run_bronze_task >> dbt_test_bronze_task >> dbt_run_silver_task >> dbt_test_silver_task >> end_task
