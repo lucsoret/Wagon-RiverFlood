@@ -6,3 +6,4 @@ sources:
     schema: "{{ env_var('GCP_DATASET') }}"
     tables:
       - name: "{{ env_var('GCP_TABLE_HISTORICAL_RAW') }}"
+      - name: "{{ env_var('GCP_TABLE_LIVE_BRONZE') }}"

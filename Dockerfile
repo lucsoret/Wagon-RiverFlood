@@ -5,16 +5,16 @@ USER root
 
 # Install gcc and other necessary build tools ( /!\ Mandatory for apache airflow packages)
 RUN apt-get update && apt-get install -y \
-    gcc \
-    python3-dev \
-    curl \
-    gnupg \
-    ca-certificates \
-    apt-transport-https
+  gcc \
+  python3-dev \
+  curl \
+  gnupg \
+  ca-certificates \
+  apt-transport-https
 # Install Google Cloud SDK
 RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - \
-    && echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list \
-    && apt-get update && apt-get install -y google-cloud-sdk
+  && echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list \
+  && apt-get update && apt-get install -y google-cloud-sdk
 
 # Clean up to reduce image size
 RUN apt-get remove -y gcc python3-dev && apt-get autoremove -y && apt-get clean
