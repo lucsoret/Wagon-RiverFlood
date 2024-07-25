@@ -6,6 +6,7 @@
 WITH top_perc AS (
   SELECT
     code_station,
+    grandeur_hydro_elab,
     PERCENTILE_CONT(resultat_obs_elab, 0.99)
       OVER (PARTITION BY code_station) AS quantile_99
   FROM
@@ -16,6 +17,7 @@ WITH top_perc AS (
 
 SELECT
   code_station,
+  grandeur_hydro_elab,
   AVG(quantile_99) AS quantile_99
 FROM
   top_perc
