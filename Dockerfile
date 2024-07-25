@@ -1,4 +1,4 @@
-FROM apache/airflow:2.7.3-python3.11
+FROM --platform=linux/amd64 apache/airflow:2.7.3-python3.11
 
 # Switch to root user
 USER root
