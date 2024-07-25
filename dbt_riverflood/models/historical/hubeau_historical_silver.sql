@@ -3,25 +3,24 @@
     cluster_by=['code_station']
 ) }}
 
-WITH top_perc AS (
-  SELECT
-    code_station,
-    grandeur_hydro_elab,
-    PERCENTILE_CONT(resultat_obs_elab, 0.99) OVER (PARTITION BY code_station) AS quantile_99,
-    PERCENTILE_CONT(resultat_obs_elab, 0.90) OVER (PARTITION BY code_station) AS quantile_90
-  FROM
-    {{ref('hubeau_historical_bronze')}}
-  WHERE
-      grandeur_hydro_elab = 'QmJ'
-    and resultat_obs_elab > 0
-)
 SELECT
   code_station,
+  latitude,
+  longitude,
   grandeur_hydro_elab,
-  AVG(quantile_99) AS quantile_99,
-  AVG(quantile_90) AS quantile_90
+  APPROX_QUANTILES(resultat_obs_elab, 1000)[OFFSET(990)]/10 AS quantile_99,
+  APPROX_QUANTILES(resultat_obs_elab, 1000)[OFFSET(900)]/10 AS quantile_90,
+  min(date_obs_elab) as minimum_date_window,
+  max(date_obs_elab) as maximum_date_window
 FROM
-  top_perc
+  {{ref('hubeau_historical_bronze')}}
+  WHERE
+WHERE
+  grandeur_hydro_elab = 'QmJ'
+  AND resultat_obs_elab > 0
 GROUP BY
   code_station,
+  latitude,
+  longitude,
   grandeur_hydro_elab
+order by code_station
