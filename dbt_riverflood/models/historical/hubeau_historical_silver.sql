@@ -10,7 +10,7 @@ WITH top_perc AS (
     PERCENTILE_CONT(resultat_obs_elab, 0.99) OVER (PARTITION BY code_station) AS quantile_99,
     PERCENTILE_CONT(resultat_obs_elab, 0.90) OVER (PARTITION BY code_station) AS quantile_90
   FROM
-    {{ref('hubeau_historical_bronze')}}
+    {{ ref('hubeau_historical_bronze') }}
   WHERE
       grandeur_hydro_elab = 'QmJ'
     and resultat_obs_elab > 0
