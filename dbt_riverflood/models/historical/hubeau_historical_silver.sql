@@ -22,4 +22,3 @@ GROUP BY
   latitude,
   longitude,
   grandeur_hydro_elab
-order by code_station
