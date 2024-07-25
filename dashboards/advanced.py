@@ -5,10 +5,33 @@ from google.oauth2 import service_account
 from google.cloud import bigquery
 from streamlit_folium import st_folium
 import folium
-credentials = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"]
-)
-client = bigquery.Client(credentials=credentials)
+import os
+
+def get_service_account_credentials():
+    private_key = os.getenv('GCP_JSON_PRIVATE_KEY')
+    if private_key is None:
+        st.error("Environment variable 'GCP_JSON_PRIVATE_KEY' not set")
+        st.stop()
+    secrets = st.secrets["gcp_service_account"]
+    service_account_info = {
+        "type": secrets["type"],
+        "project_id": secrets["project_id"],
+        "private_key_id": secrets["private_key_id"],
+        "private_key": private_key,
+        "client_email": secrets["client_email"],
+        "client_id": secrets["client_id"],
+        "auth_uri": secrets["auth_uri"],
+        "token_uri": secrets["token_uri"],
+        "auth_provider_x509_cert_url": secrets["auth_provider_x509_cert_url"],
+        "client_x509_cert_url": secrets["client_x509_cert_url"],
+    }
+
+    # Create credentials using the constructed dictionary
+    return service_account.Credentials.from_service_account_info(service_account_info)
+
+# Use the function to get credentials
+credentials = get_service_account_credentials()
+client = bigquery.Client(credentials=credentials, location="EU")
 
 @st.cache_data(ttl=600)
 def run_query(query):
@@ -52,8 +75,8 @@ def create_main_page():
     st.title("River flood")
 
     df = run_query(
-        f"""SELECT data
-        FROM `riverflood-lewagon.river_observation_multiregion.hubeau_historical`
+        f"""SELECT *
+        FROM `riverflood-lewagon.river_observation_dev.hubeau_historical_bronze`
         limit 20;
         """
     )

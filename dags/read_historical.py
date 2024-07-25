@@ -143,9 +143,9 @@ def load_to_gcs(data, date_start = pendulum.now()):
 with DAG(
     "historical_ingestion",
     description="Historical ingestion of Hub'Eau Hydrometrie API",
-    schedule_interval= '@daily',
+    schedule_interval= '0 20 * * *',
     catchup=True,
-    start_date=pendulum.today("UTC").add(days=-7),
+    start_date=pendulum.today("UTC").add(days=-1),
     default_args = {"depends_on_past": False}
 )  as dag:
 
