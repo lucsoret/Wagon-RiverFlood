@@ -1,4 +1,4 @@
-FROM python:3.11
+FROM --platform=linux/amd64 python:3.11
 
 #Do not use env as this would persist after the build and would impact your containers, children images
 ARG DEBIAN_FRONTEND=noninteractive
