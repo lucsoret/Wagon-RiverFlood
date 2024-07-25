@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: riverflood_data
+    project: "{{ env_var('GCP_PROJECT_ID') }}"
+    schema: "{{ env_var('GCP_DATASET') }}"
+    tables:
+      - name: "{{ env_var('GCP_TABLE_HISTORICAL_RAW') }}"
