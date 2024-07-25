@@ -139,5 +139,12 @@
     "type": "INTEGER",
     "description": "",
     "fields": []
+  },
+  {
+    "name": "json_file",
+    "mode": "NULLABLE",
+    "type": "STRING",
+    "description": "",
+    "fields": []
   }
 ]
