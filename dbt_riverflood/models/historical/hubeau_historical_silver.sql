@@ -14,7 +14,6 @@ SELECT
   max(date_obs_elab) as maximum_date_window
 FROM
   {{ref('hubeau_historical_bronze')}}
-  WHERE
 WHERE
   grandeur_hydro_elab = 'QmJ'
   AND resultat_obs_elab > 0
@@ -23,4 +22,3 @@ GROUP BY
   latitude,
   longitude,
   grandeur_hydro_elab
-order by code_station
