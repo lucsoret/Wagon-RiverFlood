@@ -16,7 +16,7 @@ from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 temp_file_path = "tempFile"
 bucket_name =  os.environ.get("GCP_BUCKET_NAME", "riverflood-lewagon-dev")
 dataset_id = os.environ.get("GCP_DATASET", 'river_observation_multiregion')
-table_id = os.environ.get("GCP_TABLE_HISTORICAL_BRONZE", 'hubeau_historical')
+table_id = os.environ.get("GCP_TABLE_HISTORICAL_RAW", 'hubeau_historical')
 
 gcs_hook = GCSHook(gcp_conn_id='google_cloud_default')
 bq_hook = BigQueryHook(gcp_conn_id='google_cloud_default', use_legacy_sql=False)

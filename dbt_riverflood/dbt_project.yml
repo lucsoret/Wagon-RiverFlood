@@ -32,5 +32,8 @@ clean-targets:         # directories to be removed by `dbt clean`
 models:
   dbt_riverflood:
     # Config indicated by + and applies to all files under models/example/
-    example:
-      +materialized: view
+    historical:
+      +materialized: table
+vars:
+  GCP_DATASET: "{{ env_var('GCP_DATASET') }}"
+  GCP_TABLE_HISTORICAL_RAW: "{{ env_var('GCP_TABLE_HISTORICAL_RAW') }}"
