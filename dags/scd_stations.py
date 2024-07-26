@@ -54,7 +54,7 @@ def load_to_bq(data):
 
 # Define the DAG
 with DAG(
-    "sites_ingestion",
+    "stations_ingestion",
     description="Slowly Changing Dimension - Sites",
     schedule_interval= '@weekly',
     catchup=True,
