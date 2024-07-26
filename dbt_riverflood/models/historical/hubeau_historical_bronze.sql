@@ -1,6 +1,6 @@
 {{ config(
     materialized='incremental',
-    cluster_by=['json_file', 'code_station', 'date_obs_elab']
+    cluster_by=['json_file', 'code_site', 'date_obs_elab']
 ) }}
 
 WITH FlattenedData AS (
