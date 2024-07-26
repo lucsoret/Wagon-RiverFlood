@@ -25,6 +25,35 @@ client_bq = bq_hook.get_client()
 logger = logging.getLogger(__name__)
 
 
+def create_schema_fields(schema):
+    def create_field(field):
+        # Default mode and description if not provided
+        mode = field.get('mode', 'NULLABLE')
+        description = field.get('description', None)
+
+        if field['type'] == 'RECORD':
+            # Recursively process sub-fields
+            sub_fields = [
+                create_field(sub_field)
+                for sub_field in field.get('fields', [])
+            ]
+            return bigquery.SchemaField(
+                field['name'],
+                'RECORD',
+                mode=mode,
+                description=description,
+                fields=sub_fields
+            )
+        else:
+            return bigquery.SchemaField(
+                field['name'],
+                field['type'],
+                mode=mode,
+                description=description
+            )
+
+    return [create_field(field) for field in schema]
+
 @task
 def finish():
     return 'Finito'
@@ -37,13 +66,7 @@ def create_bq_table_if_not_exists():
         schema = yaml.safe_load(file)
 
     # Convert schema into BigQuery SchemaField format
-    schema_fields = [
-        bigquery.SchemaField(field['name'], field['type'], mode=field['mode'], description=field['description'], fields=[
-            bigquery.SchemaField(sub_field['name'], sub_field['type'], mode=sub_field['mode'], description=sub_field['description'])
-            for sub_field in field.get('fields', [])
-        ]) if field['type'] == 'RECORD' else bigquery.SchemaField(field['name'], field['type'], mode=field['mode'], description=field['description'])
-        for field in schema
-    ]
+    schema_fields = create_schema_fields(schema)
 
     table_ref = client_bq.dataset(dataset_id).table(table_id)
 
