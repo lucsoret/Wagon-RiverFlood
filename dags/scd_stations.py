@@ -8,8 +8,14 @@ from google.cloud import bigquery
 from airflow.decorators import task
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 from utils.utils import create_schema_fields
+from airflow.models import Variable
 
-table_id = f"{os.environ['GCP_PROJECT_ID']}.{os.environ['GCP_DATASET']}.{os.environ['GCP_TABLE_STATIONS']}"
+
+gcp_project_id = Variable.get("GCP_PROJECT_ID")
+gcp_dataset = Variable.get("GCP_DATASET")
+gcp_table_stations = Variable.get("GCP_TABLE_STATIONS")
+
+table_id = f"{gcp_project_id}.{gcp_dataset}.{gcp_table_stations}"
 bq_hook = BigQueryHook(gcp_conn_id='google_cloud_default', use_legacy_sql=False)
 client_bq = bq_hook.get_client()
 
