@@ -13,11 +13,12 @@ from airflow.decorators import task
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 from utils.utils import create_schema_fields
+from airflow.models import Variable
 
 temp_file_path = "tempFile"
-bucket_name =  os.environ.get("GCP_BUCKET_NAME", "riverflood-lewagon-dev")
-dataset_id = os.environ.get("GCP_DATASET", 'river_observation_multiregion')
-table_id = os.environ.get("GCP_TABLE_HISTORICAL_RAW", 'hubeau_historical')
+bucket_name = Variable.get("GCP_BUCKET_NAME")
+dataset_id = Variable.get("GCP_DATASET")
+table_id = Variable.get("GCP_TABLE_HISTORICAL_RAW")
 
 gcs_hook = GCSHook(gcp_conn_id='google_cloud_default')
 bq_hook = BigQueryHook(gcp_conn_id='google_cloud_default', use_legacy_sql=False)
@@ -119,7 +120,6 @@ def extract(date_start, param='QmJ'):
 @task
 def load_to_gcs(data, date_start = pendulum.now()):
     if data:
-        bucket_name =  os.environ.get("GCP_BUCKET_NAME", "riverflood-lewagon-dev")
         gcs_path_root = 'hubeau_data_historical'
         year, month, day = date_start.split('-')
 

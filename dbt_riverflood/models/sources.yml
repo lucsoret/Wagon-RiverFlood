@@ -2,8 +2,8 @@ version: 2
 
 sources:
   - name: riverflood_data
-    project: "{{ env_var('GCP_PROJECT_ID') }}"
-    schema: "{{ env_var('GCP_DATASET') }}"
+    project: "{{ env_var('AIRFLOW_VAR_GCP_PROJECT_ID') }}"
+    schema: "{{ env_var('AIRFLOW_VAR_GCP_DATASET') }}"
     tables:
-      - name: "{{ env_var('GCP_TABLE_HISTORICAL_RAW') }}"
-      - name: "{{ env_var('GCP_TABLE_LIVE_BRONZE') }}"
+      - name: "{{ env_var('AIRFLOW_VAR_GCP_TABLE_HISTORICAL_RAW') }}"
+      - name: "{{ env_var('AIRFLOW_VAR_GCP_TABLE_LIVE_BRONZE') }}"
