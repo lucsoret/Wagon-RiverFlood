@@ -35,7 +35,7 @@ def live_ingestion():
         one_hour_ago = now - timedelta(hours=4)
         date_debut_obs = one_hour_ago.strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        url = f"https://hubeau.eaufrance.fr/api/v1/hydrometrie/observations_tr?code_entite=O972001001&date_debut_obs={date_debut_obs}"
+        url = f"https://hubeau.eaufrance.fr/api/v1/hydrometrie/observations_tr?code_site=K1370003&date_debut_obs={date_debut_obs}"
 
         response = requests.get(url)
         if response.status_code >= 200 and response.status_code < 300:

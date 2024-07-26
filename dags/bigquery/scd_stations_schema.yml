@@ -1,0 +1,95 @@
+- name: code_site
+  type: STRING
+- name: libelle_site
+  type: STRING
+- name: code_station
+  type: STRING
+- name: libelle_station
+  type: STRING
+- name: type_station
+  type: STRING
+- name: coordonnee_x_station
+  type: FLOAT
+- name: coordonnee_y_station
+  type: FLOAT
+- name: code_projection
+  type: INTEGER
+- name: longitude_station
+  type: FLOAT
+- name: latitude_station
+  type: FLOAT
+- name: influence_locale_station
+  type: FLOAT
+- name: commentaire_station
+  type: STRING
+- name: altitude_ref_alti_station
+  type: FLOAT
+- name: code_systeme_alti_site
+  type: FLOAT
+- name: code_commune_station
+  type: STRING
+- name: libelle_commune
+  type: STRING
+- name: code_departement
+  type: STRING
+- name: code_region
+  type: STRING
+- name: libelle_region
+  type: STRING
+- name: code_cours_eau
+  type: STRING
+- name: libelle_cours_eau
+  type: STRING
+- name: uri_cours_eau
+  type: STRING
+- name: descriptif_station
+  type: STRING
+- name: date_maj_station
+  type: STRING
+- name: date_ouverture_station
+  type: STRING
+- name: date_fermeture_station
+  type: STRING
+- name: commentaire_influence_locale_station
+  type: STRING
+- name: code_regime_station
+  type: INTEGER
+- name: qualification_donnees_station
+  type: INTEGER
+- name: code_finalite_station
+  type: FLOAT
+- name: type_contexte_loi_stat_station
+  type: FLOAT
+- name: type_loi_station
+  type: FLOAT
+- name: code_sandre_reseau_station
+  type: STRING
+  mode: REPEATED
+- name: date_debut_ref_alti_station
+  type: STRING
+- name: date_activation_ref_alti_station
+  type: STRING
+- name: date_maj_ref_alti_station
+  type: STRING
+- name: libelle_departement
+  type: STRING
+- name: en_service
+  type: BOOLEAN
+- name: geometry
+  type: RECORD
+  fields:
+    - name: type
+      type: STRING
+    - name: crs
+      type: RECORD
+      fields:
+        - name: type
+          type: STRING
+        - name: properties
+          type: RECORD
+          fields:
+            - name: name
+              type: STRING
+    - name: coordinates
+      type: FLOAT64
+      mode: REPEATED
