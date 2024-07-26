@@ -12,6 +12,7 @@ from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.decorators import task
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
+from utils.utils import create_schema_fields
 
 temp_file_path = "tempFile"
 bucket_name =  os.environ.get("GCP_BUCKET_NAME", "riverflood-lewagon-dev")
@@ -23,36 +24,6 @@ bq_hook = BigQueryHook(gcp_conn_id='google_cloud_default', use_legacy_sql=False)
 client_bq = bq_hook.get_client()
 
 logger = logging.getLogger(__name__)
-
-
-def create_schema_fields(schema):
-    def create_field(field):
-        # Default mode and description if not provided
-        mode = field.get('mode', 'NULLABLE')
-        description = field.get('description', None)
-
-        if field['type'] == 'RECORD':
-            # Recursively process sub-fields
-            sub_fields = [
-                create_field(sub_field)
-                for sub_field in field.get('fields', [])
-            ]
-            return bigquery.SchemaField(
-                field['name'],
-                'RECORD',
-                mode=mode,
-                description=description,
-                fields=sub_fields
-            )
-        else:
-            return bigquery.SchemaField(
-                field['name'],
-                field['type'],
-                mode=mode,
-                description=description
-            )
-
-    return [create_field(field) for field in schema]
 
 @task
 def finish():
