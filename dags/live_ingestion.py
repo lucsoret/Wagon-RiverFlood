@@ -1,17 +1,22 @@
 import json
-from datetime import datetime, timedelta, timezone
+import logging
+from datetime import datetime, timedelta
 
 import pendulum
 import requests
 from airflow.decorators import dag, task
 from airflow.models import Variable
+from airflow.operators.python import get_current_context
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from google.cloud import bigquery
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 @dag(
-    schedule_interval='0 */4 * * *',
+    schedule_interval='*/5 * * * *',
     start_date=pendulum.today("UTC").add(days=-1),
     catchup=True,
     default_args={'owner': 'airflow', 'depends_on_past': False},
@@ -31,18 +36,44 @@ def live_ingestion():
 
     @task
     def fetch_hubeau_data():
-        now = datetime.now(timezone.utc)
-        one_hour_ago = now - timedelta(hours=4)
-        date_debut_obs = one_hour_ago.strftime('%Y-%m-%dT%H:%M:%SZ')
+        context = get_current_context()
+        execution_date = context['execution_date']
 
-        url = f"https://hubeau.eaufrance.fr/api/v1/hydrometrie/observations_tr?code_station=L922000102&date_debut_obs={date_debut_obs}"
+        end_time = execution_date
+        start_time = end_time - timedelta(minutes=10)
+        date_debut_obs = start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+        date_fin_obs = end_time.strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        response = requests.get(url)
-        if response.status_code >= 200 and response.status_code < 300:
-            data = response.json()
-            return data
-        else:
+        logger.info(f"Fetching data from {date_debut_obs} to {date_fin_obs}")
+
+        url = 'https://hubeau.eaufrance.fr/api/v1/hydrometrie/observations_tr'
+
+        params = {
+            'date_debut_obs': date_debut_obs,
+            'date_fin_obs': date_fin_obs
+        }
+
+        response = requests.get(url, params=params)
+
+        if 200 > response.status_code or response.status_code >= 300:
             return []
+
+        data = response.json()
+
+        logger.info(f"Will fetch {data['count']} records")
+
+        while data.get('next'):
+            next_url = data['next']
+            if not next_url:
+                break
+            response = requests.get(next_url)
+            if 200 > response.status_code or response.status_code >= 300:
+                return data
+
+            data['data'].extend(response.json()['data'])
+            data['next'] = response.json().get('next')
+
+        return data
 
     @task
     def write_to_gcs(data):
@@ -124,8 +155,8 @@ def live_ingestion():
 
         load_job.result()
 
-    data = fetch_hubeau_data()
-    gcs_file_name = write_to_gcs(data)
+    hubeau_data = fetch_hubeau_data()
+    gcs_file_name = write_to_gcs(hubeau_data)
     bq_ready_file_name = read_from_gcs_and_prepare_for_bq(gcs_file_name)
     prepared_gcs_file_name = upload_prepared_data_to_gcs(bq_ready_file_name)
     load_to_bigquery(prepared_gcs_file_name)
