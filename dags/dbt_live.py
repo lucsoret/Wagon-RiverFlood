@@ -30,8 +30,8 @@ with DAG(
     dbt_run_latest_task = make_dbt_task("hubeau_live_latest", "run")
     #dbt_test_silver_task = make_dbt_task("hubeau_historical_silver", "test")
     dbt_run_avg_task = make_dbt_task("hubeau_live_avg", "run")
-    dbt_run_gold_task = make_dbt_task("hubeau_gold", "run")
-    dbt_run_gold_latest_task =  make_dbt_task("hubeau_gold_latest", "run")
+    dbt_run_gold_task = make_dbt_task("hubeau_indicator", "run")
+    dbt_run_gold_latest_task =  make_dbt_task("hubeau_indicator_latest", "run")
 
     start_task >> dbt_run_dedup_task >> [dbt_run_latest_task, dbt_run_avg_task, dbt_run_gold_task] >> end_task
     dbt_run_latest_task >> dbt_run_gold_latest_task >> end_task
