@@ -140,7 +140,7 @@ with DAG(
     schedule_interval= '0 20 * * *',
     catchup=True,
     start_date=pendulum.today("UTC").add(days=-365*2),
-    default_args = {"depends_on_past": False}
+    default_args = {"depends_on_past": True}
 )  as dag:
 
     finish_task = finish()
