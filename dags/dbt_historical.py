@@ -25,9 +25,9 @@ with DAG(
     end_task = EmptyOperator(
         task_id='end',
     )
-    dbt_run_bronze_task = make_dbt_task("hubeau_historical_bronze", "run")
-    dbt_test_bronze_task = make_dbt_task("hubeau_historical_bronze", "test")
-    dbt_run_silver_task = make_dbt_task("hubeau_historical_silver", "run")
-    dbt_test_silver_task = make_dbt_task("hubeau_historical_silver", "test")
+    dbt_run_bronze_task = make_dbt_task("hubeau_historical_flatten", "run")
+    dbt_test_bronze_task = make_dbt_task("hubeau_historical_flatten", "test")
+    dbt_run_silver_task = make_dbt_task("hubeau_historical_agg", "run")
+    dbt_test_silver_task = make_dbt_task("hubeau_historical_agg", "test")
 
     start_task >> dbt_run_bronze_task >> dbt_test_bronze_task >> dbt_run_silver_task >> dbt_test_silver_task >> end_task
