@@ -5,6 +5,8 @@
 
 WITH latest_metric AS (
   SELECT
+    lsilver.longitude,
+    lsilver.latitude,
     lsilver.code_station,
     lsilver.date_obs,
     lsilver.resultat_obs,
@@ -13,9 +15,9 @@ WITH latest_metric AS (
     hsilver.quantile_10,
     hsilver.quantile_01,
   FROM
-    {{ref("hubeau_live_dedup")}} lsilver
+    {{ref("hubeau_live_latest")}} lsilver
   INNER JOIN
-    {{ref("hubeau_historical_silver")}} hsilver
+    {{ref("hubeau_historical_agg")}} hsilver
   ON
     lsilver.code_station = hsilver.code_station
   WHERE
@@ -32,6 +34,8 @@ SELECT
   date_obs,
   resultat_obs,
   code_station,
+  longitude,
+  latitude,
   quantile_01,
   quantile_10,
   quantile_90,

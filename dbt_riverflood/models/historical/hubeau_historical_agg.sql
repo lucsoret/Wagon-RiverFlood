@@ -15,7 +15,7 @@ SELECT
   min(date_obs_elab) as minimum_date_window,
   max(date_obs_elab) as maximum_date_window
 FROM
-  {{ref('hubeau_historical_bronze')}}
+  {{ref('hubeau_historical_flatten')}}
 WHERE
   grandeur_hydro_elab = 'QmJ'
   AND resultat_obs_elab > 0
