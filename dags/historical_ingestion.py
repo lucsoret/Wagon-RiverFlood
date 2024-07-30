@@ -12,18 +12,19 @@ from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.decorators import task
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
+from utils.utils import create_schema_fields
+from airflow.models import Variable
 
 temp_file_path = "tempFile"
-bucket_name =  os.environ.get("GCP_BUCKET_NAME", "riverflood-lewagon-dev")
-dataset_id = os.environ.get("GCP_DATASET", 'river_observation_multiregion')
-table_id = os.environ.get("GCP_TABLE_HISTORICAL_RAW", 'hubeau_historical')
+bucket_name = Variable.get("GCP_BUCKET_NAME")
+dataset_id = Variable.get("GCP_DATASET")
+table_id = Variable.get("GCP_TABLE_HISTORICAL_RAW")
 
 gcs_hook = GCSHook(gcp_conn_id='google_cloud_default')
 bq_hook = BigQueryHook(gcp_conn_id='google_cloud_default', use_legacy_sql=False)
 client_bq = bq_hook.get_client()
 
 logger = logging.getLogger(__name__)
-
 
 @task
 def finish():
@@ -37,13 +38,7 @@ def create_bq_table_if_not_exists():
         schema = yaml.safe_load(file)
 
     # Convert schema into BigQuery SchemaField format
-    schema_fields = [
-        bigquery.SchemaField(field['name'], field['type'], mode=field['mode'], description=field['description'], fields=[
-            bigquery.SchemaField(sub_field['name'], sub_field['type'], mode=sub_field['mode'], description=sub_field['description'])
-            for sub_field in field.get('fields', [])
-        ]) if field['type'] == 'RECORD' else bigquery.SchemaField(field['name'], field['type'], mode=field['mode'], description=field['description'])
-        for field in schema
-    ]
+    schema_fields = create_schema_fields(schema)
 
     table_ref = client_bq.dataset(dataset_id).table(table_id)
 
@@ -125,7 +120,6 @@ def extract(date_start, param='QmJ'):
 @task
 def load_to_gcs(data, date_start = pendulum.now()):
     if data:
-        bucket_name =  os.environ.get("GCP_BUCKET_NAME", "riverflood-lewagon-dev")
         gcs_path_root = 'hubeau_data_historical'
         year, month, day = date_start.split('-')
 

@@ -34,8 +34,10 @@ x-airflow-common:
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
   #image: apache/airflow:2.9.3
   build: .
+  platform: linux/amd64
   environment:
     &airflow-common-env
+    AIRFLOW__CORE__TEST_CONNECTION: 'true'
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
