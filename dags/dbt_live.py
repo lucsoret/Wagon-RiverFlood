@@ -14,8 +14,8 @@ def make_dbt_task(model: str, dbt_verb: str) -> BashOperator:
 with DAG(
     "dbt_live",
     description="Live ingestion of Hub'Eau Hydrometrie API",
-    schedule_interval = '*/10 * * * *',
-    catchup=True,
+    schedule_interval = '*/5 * * * *',
+    catchup=False,
     start_date=pendulum.today("UTC").add(days=-1),
     default_args = {"depends_on_past": False}
 )  as dag:
