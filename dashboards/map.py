@@ -111,8 +111,6 @@ def create_main_page():
     st.write(live_df)
 
     df = get_live_stations(client)
-
-    st.write(df.head())
     locs_map = get_map(df)
     st_data = st_folium(locs_map, width=725)
     end_time = timer()
