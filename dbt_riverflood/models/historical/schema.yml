@@ -1,0 +1,7 @@
+version: 2
+
+models:
+  - name: hubeau_historical_agg
+    description: Aggregate hubeau_historical_flatten in order to generate P99,P90,P10 and P1 metrics
+  - name: hubeau_historical_flatten
+    description: Convert bucket json into a column database. Store historical data of hubeau (only Q)
