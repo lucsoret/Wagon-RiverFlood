@@ -1,7 +1,9 @@
 from datetime import datetime
 from timeit import default_timer as timer
 
+import altair as alt
 import folium
+import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
 
@@ -42,6 +44,7 @@ def get_live_stations(_client):
                     resultat_obs,
                     stations.latitude_station,
                     stations.longitude_station,
+                    quantile_999,
                     quantile_990,
                     quantile_900,
                     quantile_001,
@@ -65,30 +68,33 @@ def get_map(df):
     )
 
     for i in range(0, len(df)):
+        quantile_999 = df.iloc[i]["quantile_999"]
         quantile_990 = df.iloc[i]["quantile_990"]
         quantile_900 = df.iloc[i]["quantile_900"]
         quantile_001 = df.iloc[i]["quantile_001"]
         resultat_obs = df.iloc[i]["resultat_obs"]
 
-        flood_indicateur = resultat_obs / quantile_900 / 10
+        flood_indicateur = (
+                                   resultat_obs / quantile_990) / 10  # to match what we said on the bottom regarding quantiles being divided by 10
 
         if flood_indicateur == 0:
             continue
 
-        color = "red" if flood_indicateur > 0.9 else "blue"
+        color = "red" if flood_indicateur > 1 else "blue"
 
+        radius = flood_indicateur * 20 if flood_indicateur > 1 else flood_indicateur
         folium.CircleMarker(
             location=[df.iloc[i]["latitude_station"], df.iloc[i]["longitude_station"]],
-            radius=flood_indicateur ** 2,
+            radius=radius,
             # color="green",
             # weight=50,
             # opacity=0.05,
-            fill_opacity=1,
+            fill_opacity=0.2,
             fill_color=(color),
             # icon=folium.Icon(
             # icon="flag",
             fill=True,
-            popup=[df.iloc[i]["code_station"], flood_indicateur],
+            popup=df.iloc[i]["code_station"],
             stroke=False,
 
         ).add_to(locs_map)
@@ -115,18 +121,106 @@ def create_main_page():
     st_data = st_folium(locs_map, width=725)
     end_time = timer()
     st.write(f"this took {end_time - start_time}")
-    st.write(f"site station set to {st_data['last_object_clicked_popup']}")
 
-    # # return
+    selected_station = st_data.get("last_object_clicked_popup")
+    if selected_station:
+        write_station_details(client, selected_station)
 
-    st.session_state.site_station = st_data["last_object_clicked_popup"]
 
-    return
+def write_station_details(client, selected_station):
+    query_q = f"""
+        select resultat_obs_elab, date_obs_elab
+        from river_observation_prod.hubeau_historical_flatten
+        where code_station = '{selected_station}'
+    """
+
+    df_q = client.query(query_q).to_dataframe()
+
+    chart_q = (
+        alt.Chart(
+            data=df_q,
+            title="Water Flow Rates to calculate P90",
+        )
+        .mark_line(point=False,
+                   color='red',
+                   strokeDash=[4, 2])
+        .encode(
+            x=alt.X("date_obs_elab:T", axis=alt.Axis(title="Date")),
+            y=alt.Y("resultat_obs_elab:Q", axis=alt.Axis(title="Flow Rate"),
+                    scale=alt.Scale(domain=[min(df_q["resultat_obs_elab"]), max(df_q["resultat_obs_elab"])])),
+        )
+    )
+
+    latest_station_indicator_query = f"""
+        select resultat_obs,
+               quantile_999,
+               quantile_990,
+               quantile_900,
+        from river_observation_prod.hubeau_indicator_latest indicators
+        where code_station = '{selected_station}'
+    """
+
+    df_indicator = client.query(latest_station_indicator_query).to_dataframe()
+    quantile999 = df_indicator["quantile_999"][0] * 10
+    quantile990 = df_indicator["quantile_990"][0] * 10
+    quantile900 = df_indicator["quantile_900"][
+                      0] * 10  # We've multiply this by 10 because indicators_latest had it divided by 10
+
+    line_q_p999 = (
+        alt.Chart(
+            data=pd.DataFrame({'y': [quantile999]})
+        )
+        .mark_rule(color='red', strokeDash=[4, 2])
+        .encode(
+            y=alt.Y("y:Q")
+        )
+    )
+
+    line_q_p990 = (
+        alt.Chart(
+            data=pd.DataFrame({'y': [quantile990]})
+        )
+        .mark_rule(color='blue', strokeDash=[4, 2])
+        .encode(
+            y=alt.Y("y:Q")
+        )
+    )
+
+    line_q_p900 = (
+        alt.Chart(
+            data=pd.DataFrame({'y': [quantile900]})
+        )
+        .mark_rule(color='green', strokeDash=[4, 2])
+        .encode(
+            y=alt.Y("y:Q")
+        )
+    )
+
+    st.altair_chart(chart_q + line_q_p999 + line_q_p990 + line_q_p900, use_container_width=True)
+
+    query_live = f"""
+        select resultat_obs, date_obs
+        from river_observation_prod.hubeau_live_recent
+        where code_station = '{selected_station}' and grandeur_hydro = 'Q'
+    """
+
+    df_live = client.query(query_live).to_dataframe()
+
+    chart_live = (
+        alt.Chart(
+            data=df_live,
+            title="Live Water Flow Rates",
+        )
+        .mark_line(point=True)
+        .encode(
+            x=alt.X("date_obs:T", axis=alt.Axis(title="Date")),
+            y=alt.Y("resultat_obs:Q", axis=alt.Axis(title="Flow Rate"),
+                    scale=alt.Scale(domain=[min(df_live["resultat_obs"]), max(df_live["resultat_obs"])])),
+        )
+    )
+
+    st.altair_chart(chart_live, use_container_width=True)
 
 
 if __name__ == "__main__":
     create_main_page()
-    #
-    # while True:
-    #     time.sleep(30)
-    #     st.rerun()
