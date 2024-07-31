@@ -1,4 +1,3 @@
-import time
 from datetime import datetime
 from timeit import default_timer as timer
 
@@ -7,24 +6,6 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 from gcp import get_service_account_credentials, get_client
-
-
-def get_latest_data(_client):
-    old_live_df = st.session_state.live_df if "live_df" in st.session_state else None
-
-    query = (
-        f"""select code_station, date_obs, resultat_obs, data.grandeur_hydro from `river_observation_prod.hubeau_live_latest` data order by date_obs desc limit 50
-        """
-    )
-
-    df = _client.query(query).to_dataframe()
-
-    if old_live_df is not None:
-        df = df.compare(old_live_df)
-
-    st.session_state.live_df = df
-
-    return df, old_live_df
 
 
 def get_latest_rolling_data(_client):
@@ -53,17 +34,21 @@ def get_latest_rolling_data(_client):
     return df
 
 
-def get_historical_data(_client):
+def get_live_stations(_client):
     query = (
         f"""select  stations.code_station,
                     date_obs,
                     flood_indicateur,
                     resultat_obs,
                     stations.latitude_station,
-                    stations.longitude_station
+                    stations.longitude_station,
+                    quantile_990,
+                    quantile_900,
+                    quantile_001,
             from river_observation_prod.hubeau_indicator_latest indicators
                 join river_observation_prod.d_hubeau_stations stations
                     on indicators.code_station = stations.code_station
+            order by date_obs desc
         """
 
     )
@@ -72,34 +57,43 @@ def get_historical_data(_client):
 
 
 def get_map(df):
-    if "map" not in st.session_state:
-        locs_map = folium.Map(
-            location=[46.856614, 2.3522219],
-            zoom_start=6, tiles="cartodbpositron",
-            zoom_control=True,
-            scrollWheelZoom=False
-        )
+    locs_map = folium.Map(
+        location=[46.856614, 2.3522219],
+        zoom_start=6, tiles="cartodbpositron",
+        zoom_control=True,
+        scrollWheelZoom=False
+    )
 
-        for i in range(0, len(df)):
-            folium.CircleMarker(
-                location=[df.iloc[i]["latitude_station"], df.iloc[i]["longitude_station"]],
-                radius=df.iloc[i]["flood_indicateur"] * 10,
-                color="green",
-                weight=50,
-                opacity=0.05,
-                fill_opacity=1,
-                fill_color=("red" if df.iloc[i]["flood_indicateur"] > 0.9 else "blue"),
-                # icon=folium.Icon(
-                # icon="flag",
-                fill=False,
-                popup=df.iloc[i]["code_station"],
-                stroke=True,
+    for i in range(0, len(df)):
+        quantile_990 = df.iloc[i]["quantile_990"]
+        quantile_900 = df.iloc[i]["quantile_900"]
+        quantile_001 = df.iloc[i]["quantile_001"]
+        resultat_obs = df.iloc[i]["resultat_obs"]
 
-            ).add_to(locs_map)
+        flood_indicateur = resultat_obs / quantile_900 / 10
 
-        st.session_state.map = locs_map
+        if flood_indicateur == 0:
+            continue
 
-    return st.session_state.map
+        color = "red" if flood_indicateur > 0.9 else "blue"
+
+        folium.CircleMarker(
+            location=[df.iloc[i]["latitude_station"], df.iloc[i]["longitude_station"]],
+            radius=flood_indicateur ** 2,
+            # color="green",
+            # weight=50,
+            # opacity=0.05,
+            fill_opacity=1,
+            fill_color=(color),
+            # icon=folium.Icon(
+            # icon="flag",
+            fill=True,
+            popup=[df.iloc[i]["code_station"], flood_indicateur],
+            stroke=False,
+
+        ).add_to(locs_map)
+
+    return locs_map
 
 
 def create_main_page():
@@ -116,7 +110,7 @@ def create_main_page():
 
     st.write(live_df)
 
-    df = get_historical_data(client)
+    df = get_live_stations(client)
 
     st.write(df.head())
     locs_map = get_map(df)
