@@ -1,63 +1,69 @@
-# import altair as alt
-import os
+import time
+from datetime import datetime
 from timeit import default_timer as timer
 
 import folium
-import pendulum
 import streamlit as st
-from google.cloud import bigquery
-from google.oauth2 import service_account
 from streamlit_folium import st_folium
 
-
-def get_service_account_credentials():
-    # get the GCP credentials once if not already in session_state
-    if 'credentials' not in st.session_state:
-        private_key = os.getenv('GCP_JSON_PRIVATE_KEY')
-        if private_key is None:
-            st.error("Environment variable 'GCP_JSON_PRIVATE_KEY' not set")
-            st.stop()
-        secrets = st.secrets["gcp_service_account"]
-        service_account_info = {
-            "type": secrets["type"],
-            "project_id": secrets["project_id"],
-            "private_key_id": secrets["private_key_id"],
-            "private_key": private_key,
-            "client_email": secrets["client_email"],
-            "client_id": secrets["client_id"],
-            "auth_uri": secrets["auth_uri"],
-            "token_uri": secrets["token_uri"],
-            "auth_provider_x509_cert_url": secrets["auth_provider_x509_cert_url"],
-            "client_x509_cert_url": secrets["client_x509_cert_url"],
-        }
-        credentials = service_account.Credentials.from_service_account_info(service_account_info)
-        # Create credentials using the constructed dictionary and store in session state
-        st.session_state.credentials = credentials
-    credentials = st.session_state.credentials
-
-    return credentials
+from gcp import get_service_account_credentials, get_client
 
 
-def get_client(credentials):
-    if "client" not in st.session_state:
-        st.session_state.client = bigquery.Client(credentials=credentials, location="EU")
-    client = st.session_state.client
-    return client
-
-
-@st.cache_data(ttl=600)
-def get_historical_data(_client):
-    # Use the function to get credentials
+def get_latest_data(_client):
+    old_live_df = st.session_state.live_df if "live_df" in st.session_state else None
 
     query = (
-        # f"""SELECT *
-        # FROM `riverflood-lewagon.river_observation_dev.hubeau_historical_bronze`
-        # where (latitude between 0 AND 90) and (longitude between 0 AND 5)
-        # limit 2000;
-        # """
-        f"""SELECT *
-        FROM `riverflood-lewagon.river_observation_dev.hubeau_indicator_latest`
---         where (latitude between 0 AND 90) and (longitude between 0 AND 5)
+        f"""select code_station, date_obs, resultat_obs, data.grandeur_hydro from `river_observation_prod.hubeau_live_latest` data order by date_obs desc limit 50
+        """
+    )
+
+    df = _client.query(query).to_dataframe()
+
+    if old_live_df is not None:
+        df = df.compare(old_live_df)
+
+    st.session_state.live_df = df
+
+    return df, old_live_df
+
+
+def get_latest_rolling_data(_client):
+    current_live_list = st.session_state.current_live_df.to_list() if "current_live_df" in st.session_state else []
+
+    now = datetime.now()
+
+    where_clause = f"where date_obs > '{now}'" if current_live_list else ""
+
+    query = (
+        f"""
+        select code_station, code_site, date_obs, resultat_obs, grandeur_hydro,
+        from `river_observation_prod.hubeau_live_latest`
+        {where_clause}
+        order by date_obs desc limit 5
+        """
+    )
+
+    # no refresh time at first
+    # read it from session state or date_obs
+
+    df = _client.query(query).to_dataframe()
+
+    st.session_state.last_refresh_time = now
+
+    return df
+
+
+def get_historical_data(_client):
+    query = (
+        f"""select  stations.code_station,
+                    date_obs,
+                    flood_indicateur,
+                    resultat_obs,
+                    stations.latitude_station,
+                    stations.longitude_station
+            from river_observation_prod.hubeau_indicator_latest indicators
+                join river_observation_prod.d_hubeau_stations stations
+                    on indicators.code_station = stations.code_station
         """
 
     )
@@ -73,51 +79,14 @@ def get_map(df):
             zoom_control=True,
             scrollWheelZoom=False
         )
-        # fmc = plugins.FastMarkerCluster(df[['latitude', 'longitude']].values.tolist())
-        # locs_map.add_child(fmc)
-
-        # for i in range(0,len(df)):
-        #     folium.Marker(
-        #         location=[df.iloc[i]["latitude"], df.iloc[i]["longitude"]],
-        #         popup=df.iloc[i]["code_station"],
-        #         icon=folium.Icon(
-        #             icon="flag",
-        #             color=("red" if df.iloc[i]["resultat_obs_elab"] > 1000 else "blue"))
-        #     ).add_to(mc)
 
         for i in range(0, len(df)):
-            #     date = '2024-07-30 17:15:00.000000'
-            #     parsed = pendulum.parse(date)
-            #     st.write(pendulum.now())
-            #     # subtract
-            #     difference = pendulum.now() - parsed
-            #     st.write(difference.total_seconds())
-
-            date = df.iloc[i]["date_obs"]
-            # 2024-07-30 17:15:00.000000
-            # parsed = pendulum.from_timestamp(date)
-            # difference = pendulum.now() - parsed
-
-            # radius = 10000
-            # folium.Circle(
-            #     location=[-27.551667, -48.478889],
-            #     radius=radius,
-            #     color="black",
-            #     weight=1,
-            #     fill_opacity=0.6,
-            #     opacity=1,
-            #     fill_color="green",
-            #     fill=False,  # gets overridden by fill_color
-            #     popup="{} meters".format(radius),
-            #     tooltip="I am in meters",
-            # ).add_to(m)
-
             folium.CircleMarker(
-                location=[df.iloc[i]["latitude"], df.iloc[i]["longitude"]],
+                location=[df.iloc[i]["latitude_station"], df.iloc[i]["longitude_station"]],
                 radius=df.iloc[i]["flood_indicateur"] * 10,
                 color="green",
                 weight=50,
-                opacity=0.3,
+                opacity=0.05,
                 fill_opacity=1,
                 fill_color=("red" if df.iloc[i]["flood_indicateur"] > 0.9 else "blue"),
                 # icon=folium.Icon(
@@ -128,34 +97,29 @@ def get_map(df):
 
             ).add_to(locs_map)
 
-        callback = ('function (row) {'
-                    'var circle = L.circle(new L.LatLng(row["latitude"], row["longitude"]), {color: "red",  radius: row["resultat_obs_elab"]});'
-                    'return circle};')
-        # locs_map.add_child(plugins.FastMarkerCluster(df[['latitude', 'longitude']].values.tolist(), callback=callback))
         st.session_state.map = locs_map
+
     return st.session_state.map
 
 
 def create_main_page():
-    """
-    Creates the following Streamlit headers:
-    - A title
-    - A subheader
-    - A title in the sidebar
-    - A markdown section in the sidebar
-    """
-    # st.image("dashboards/images/BlueRiver.jpg")
     st.logo("dashboards/images/BlueRiver.png")
     start_time = timer()
     credentials = get_service_account_credentials()
     client = get_client(credentials)
     st.title("River flood")
+
+    st.subheader("Latest live data")
+    st.metric("Last refresh time:",
+              f'{st.session_state.last_refresh_time if "last_refresh_time" in st.session_state else "never"}')
+    live_df = get_latest_rolling_data(client)
+
+    st.write(live_df)
+
     df = get_historical_data(client)
 
     st.write(df.head())
     locs_map = get_map(df)
-    # # Print results.
-    # st_data = folium_static(locs_map, width = 725)
     st_data = st_folium(locs_map, width=725)
     end_time = timer()
     st.write(f"this took {end_time - start_time}")
@@ -164,8 +128,13 @@ def create_main_page():
     # # return
 
     st.session_state.site_station = st_data["last_object_clicked_popup"]
+
     return
 
 
 if __name__ == "__main__":
     create_main_page()
+    #
+    # while True:
+    #     time.sleep(30)
+    #     st.rerun()
