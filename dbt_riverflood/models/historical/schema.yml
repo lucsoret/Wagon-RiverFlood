@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: hubeau_historical_agg
+    description: Aggregate hubeau_historical_flatten in order to generate P99,P90,P10 and P1 metrics
+  - name: hubeau_historical_flatten
+    description: Convert bucket json into a column database. Store historical data of hubeau (only Q)
+# Optional: Document sources if needed
+sources:
+  - name: riverflood_data
+    description: Dataset that contains every layers of the hubeau project
+    tables:
+      - name:  "{{ env_var('AIRFLOW_VAR_GCP_TABLE_HISTORICAL_RAW') }}"
+        description: Table that contains historical raw data. It's just a raw version of the gcs buckets converted into bigquery
