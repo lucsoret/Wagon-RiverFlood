@@ -1,13 +1,13 @@
 # import altair as alt
-import pandas as pd
-import streamlit as st
-from google.oauth2 import service_account
-from google.cloud import bigquery
-from streamlit_folium import st_folium, folium_static
-import folium
 import os
-import folium.plugins as plugins
 from timeit import default_timer as timer
+
+import folium
+import pendulum
+import streamlit as st
+from google.cloud import bigquery
+from google.oauth2 import service_account
+from streamlit_folium import st_folium
 
 
 def get_service_account_credentials():
@@ -37,6 +37,7 @@ def get_service_account_credentials():
 
     return credentials
 
+
 def get_client(credentials):
     if "client" not in st.session_state:
         st.session_state.client = bigquery.Client(credentials=credentials, location="EU")
@@ -49,32 +50,31 @@ def get_historical_data(_client):
     # Use the function to get credentials
 
     query = (
+        # f"""SELECT *
+        # FROM `riverflood-lewagon.river_observation_dev.hubeau_historical_bronze`
+        # where (latitude between 0 AND 90) and (longitude between 0 AND 5)
+        # limit 2000;
+        # """
         f"""SELECT *
-        FROM `riverflood-lewagon.river_observation_dev.hubeau_historical_bronze`
-        where (latitude between 0 AND 90) and (longitude between 0 AND 5)
-        limit 2000;
-        """
-        f"""SELECT *
-        FROM `riverflood-lewagon.river_observation_dev.hubeau_historical_bronze`
-        where (latitude between 0 AND 90) and (longitude between 0 AND 5)
-        limit 2000;
+        FROM `riverflood-lewagon.river_observation_dev.hubeau_indicator_latest`
+--         where (latitude between 0 AND 90) and (longitude between 0 AND 5)
         """
 
     )
     df = _client.query(query).to_dataframe()
     return df
 
+
 def get_map(df):
     if "map" not in st.session_state:
         locs_map = folium.Map(
-                location=[46.856614, 2.3522219],
-                zoom_start=6, tiles="cartodbpositron",
-                zoom_control=True,
-                scrollWheelZoom=False
-            )
+            location=[46.856614, 2.3522219],
+            zoom_start=6, tiles="cartodbpositron",
+            zoom_control=True,
+            scrollWheelZoom=False
+        )
         # fmc = plugins.FastMarkerCluster(df[['latitude', 'longitude']].values.tolist())
         # locs_map.add_child(fmc)
-
 
         # for i in range(0,len(df)):
         #     folium.Marker(
@@ -85,22 +85,56 @@ def get_map(df):
         #             color=("red" if df.iloc[i]["resultat_obs_elab"] > 1000 else "blue"))
         #     ).add_to(mc)
 
-        for i in range(0,len(df)):
+        for i in range(0, len(df)):
+            #     date = '2024-07-30 17:15:00.000000'
+            #     parsed = pendulum.parse(date)
+            #     st.write(pendulum.now())
+            #     # subtract
+            #     difference = pendulum.now() - parsed
+            #     st.write(difference.total_seconds())
+
+            date = df.iloc[i]["date_obs"]
+            # 2024-07-30 17:15:00.000000
+            # parsed = pendulum.from_timestamp(date)
+            # difference = pendulum.now() - parsed
+
+            # radius = 10000
+            # folium.Circle(
+            #     location=[-27.551667, -48.478889],
+            #     radius=radius,
+            #     color="black",
+            #     weight=1,
+            #     fill_opacity=0.6,
+            #     opacity=1,
+            #     fill_color="green",
+            #     fill=False,  # gets overridden by fill_color
+            #     popup="{} meters".format(radius),
+            #     tooltip="I am in meters",
+            # ).add_to(m)
+
             folium.CircleMarker(
                 location=[df.iloc[i]["latitude"], df.iloc[i]["longitude"]],
-                popup=df.iloc[i]["code_station"],
+                radius=df.iloc[i]["flood_indicateur"] * 10,
+                color="green",
+                weight=50,
+                opacity=0.3,
+                fill_opacity=1,
+                fill_color=("red" if df.iloc[i]["flood_indicateur"] > 0.9 else "blue"),
                 # icon=folium.Icon(
-                    # icon="flag",
-                radius = df.iloc[i]["resultat_obs_elab"]**0.25,
-                color=("red" if df.iloc[i]["resultat_obs_elab"] > 1000 else "blue")
+                # icon="flag",
+                fill=False,
+                popup=df.iloc[i]["code_station"],
+                stroke=True,
+
             ).add_to(locs_map)
 
         callback = ('function (row) {'
-                'var circle = L.circle(new L.LatLng(row["latitude"], row["longitude"]), {color: "red",  radius: row["resultat_obs_elab"]});'
-                'return circle};')
+                    'var circle = L.circle(new L.LatLng(row["latitude"], row["longitude"]), {color: "red",  radius: row["resultat_obs_elab"]});'
+                    'return circle};')
         # locs_map.add_child(plugins.FastMarkerCluster(df[['latitude', 'longitude']].values.tolist(), callback=callback))
         st.session_state.map = locs_map
     return st.session_state.map
+
 
 def create_main_page():
     """
@@ -124,12 +158,14 @@ def create_main_page():
     # st_data = folium_static(locs_map, width = 725)
     st_data = st_folium(locs_map, width=725)
     end_time = timer()
-    st.write(f"this took {end_time-start_time}")
+    st.write(f"this took {end_time - start_time}")
     st.write(f"site station set to {st_data['last_object_clicked_popup']}")
+
     # # return
 
     st.session_state.site_station = st_data["last_object_clicked_popup"]
     return
+
 
 if __name__ == "__main__":
     create_main_page()
