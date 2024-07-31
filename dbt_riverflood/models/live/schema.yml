@@ -5,5 +5,7 @@ models:
     description: Remove duplicates from raw data
   - name: hubeau_live_latest
     description: From hubeau_live_dedup extract the latest data for each (code_station, grandeur_hydro)
+  - name: hubeau_live_recent
+    description: From hubeau_live_dedup extract the most recents data for each (code_station, grandeur_hydro)
   - name: hubeau_live_avg
     description: Compute average H from hubeau_live_dedup
