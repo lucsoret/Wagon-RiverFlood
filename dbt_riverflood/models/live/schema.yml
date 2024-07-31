@@ -7,9 +7,3 @@ models:
     description: From hubeau_live_dedup extract the latest data for each (code_station, grandeur_hydro)
   - name: hubeau_live_avg
     description: Compute average H from hubeau_live_dedup
-sources:
-  - name: riverflood_data
-    description: Dataset that contains every layers of the hubeau project
-    tables:
-      - name:  "{{ env_var('AIRFLOW_VAR_GCP_TABLE_LIVE_RAW') }}"
-        description: Table that contains live raw data. It's just a raw version of the gcs buckets converted into bigquery
