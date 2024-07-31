@@ -5,5 +5,5 @@ models:
     description: Join hubeau_live_dedup and hubeau_historical_agg to generate flood risk indicator
   - name: hubeau_indicator_latest
     description: Join hubeau_live_latest and hubeau_historical_agg to generate flood risk indicator from the latest data
-  - name: hubeau_indicator_latest
+  - name: hubeau_indicator_recent
     description: Join hubeau_live_latest and hubeau_historical_agg to generate flood risk indicator from the most recent data
