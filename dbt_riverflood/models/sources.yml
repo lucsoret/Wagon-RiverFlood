@@ -6,4 +6,6 @@ sources:
     schema: "{{ env_var('AIRFLOW_VAR_GCP_DATASET') }}"
     tables:
       - name: "{{ env_var('AIRFLOW_VAR_GCP_TABLE_HISTORICAL_RAW') }}"
+        description: Table that contains historical raw data. It's just a raw version of the gcs buckets converted into bigquery
       - name: "{{ env_var('AIRFLOW_VAR_GCP_TABLE_LIVE_RAW') }}"
+        description: Table that contains live raw data. It's just a raw version of the gcs buckets converted into bigquer
