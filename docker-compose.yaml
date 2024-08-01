@@ -83,7 +83,7 @@ services:
       - ./.streamlit:/app/.streamlit/
       - ./dashboards:/app/dashboards/
 
-    command: ["streamlit", "run", "dashboards/advanced.py"]
+    command: ["streamlit", "run", "dashboards/map.py"]
     ports:
       - 8501:8501
     stdin_open: true # eq. to -i in docker run (allows breakpoints)
