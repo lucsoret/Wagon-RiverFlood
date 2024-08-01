@@ -101,7 +101,7 @@ def get_map(df):
             # color="green",
             # weight=50,
             # opacity=0.05,
-            fill_opacity=fill_opacity,
+            fill_opacity=0.20,
             fill_color=color,
             # icon=folium.Icon(
             # icon="flag",
@@ -127,7 +127,7 @@ def get_map_grid(df):
     norm = mcolors.Normalize(vmin=0, vmax=1)
 
     # Define the grid size in degrees (latitude and longitude)
-    grid_size = 0.20
+    grid_size = 0.10
 
     # Calculate grid cell bounds
     min_lat = df['latitude_station'].min()
