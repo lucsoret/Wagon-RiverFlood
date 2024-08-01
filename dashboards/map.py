@@ -25,6 +25,8 @@ def get_live_stations(_client):
                     quantile_900,
                     quantile_001,
             from river_observation_prod.hubeau_indicator_latest
+                where date_obs >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+                and code_station is not null
             order by date_obs desc
         """
 
@@ -145,11 +147,31 @@ def write_station_details(client, selected_station):
         )
     )
 
+    text_q_p990 = (
+        alt.Chart(
+            data=pd.DataFrame({'y': [quantile990]})
+        )
+        .mark_text(text='Top 99%', dx=-450, dy=-10, color='blue', fontSize=20)
+        .encode(
+            y=alt.Y("y:Q")
+        )
+    )
+
     line_q_p990 = (
         alt.Chart(
             data=pd.DataFrame({'y': [quantile990]})
         )
         .mark_rule(color='blue', strokeDash=[10, 4])
+        .encode(
+            y=alt.Y("y:Q")
+        )
+    )
+
+    text_q_p900 = (
+        alt.Chart(
+            data=pd.DataFrame({'y': [quantile900]})
+        )
+        .mark_text(text='Top 90%', dx=-450, dy=-10, color='green', fontSize=20)
         .encode(
             y=alt.Y("y:Q")
         )
@@ -169,7 +191,9 @@ def write_station_details(client, selected_station):
         chart_q,
         text_q_p999,
         line_q_p999,
+        text_q_p990,
         line_q_p990,
+        text_q_p900,
         line_q_p900
     ).configure_axis(
         labelFontSize=20,
@@ -197,8 +221,11 @@ def write_station_details(client, selected_station):
 
     layer_live = alt.layer(
         chart_live,
+        text_q_p999,
         line_q_p999,
+        text_q_p990,
         line_q_p990,
+        text_q_p900,
         line_q_p900
     ).configure_axis(
         labelFontSize=19,
