@@ -5,8 +5,8 @@
 
 WITH latest_metric AS (
   SELECT
-    lsilver.longitude,
-    lsilver.latitude,
+    hsilver.longitude,
+    hsilver.latitude,
     lsilver.code_station,
     lsilver.date_obs,
     lsilver.resultat_obs,
@@ -31,7 +31,7 @@ SELECT
   CASE
     WHEN resultat_obs > quantile_990 then 1
     WHEN resultat_obs < quantile_010 then 0
-    else (resultat_obs - quantile_001) / (quantile_990 - quantile_010)
+    else (resultat_obs - quantile_010) / (quantile_990 - quantile_010)
   end as flood_indicateur,
   longitude,
   latitude,
