@@ -27,9 +27,9 @@ WITH latest_metric AS (
 )
 SELECT
   CASE
-    WHEN resultat_obs > quantile_999 then 1
-    WHEN resultat_obs < quantile_001 then 0
-    else (resultat_obs - quantile_001) / (quantile_999 - quantile_001)
+    WHEN resultat_obs > quantile_990 then 1
+    WHEN resultat_obs < quantile_010 then 0
+    else (resultat_obs - quantile_010) / (quantile_990 - quantile_010)
   end as flood_indicateur,
   date_obs,
   resultat_obs,
