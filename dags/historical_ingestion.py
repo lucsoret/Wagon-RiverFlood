@@ -139,8 +139,8 @@ with DAG(
     description="Historical ingestion of Hub'Eau Hydrometrie API",
     schedule_interval= '0 20 * * *',
     catchup=True,
-    start_date=pendulum.today("UTC").add(days=-1),
-    default_args = {"depends_on_past": False}
+    start_date=pendulum.today("UTC").add(days=-365*2),
+    default_args = {"depends_on_past": True}
 )  as dag:
 
     finish_task = finish()
