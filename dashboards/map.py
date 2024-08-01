@@ -1,6 +1,6 @@
 import time
 from timeit import default_timer as timer
-
+import requests
 import altair as alt
 import folium
 import matplotlib.colors as mcolors
@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
+import io
 
 from gcp import get_service_account_credentials, get_client
 
@@ -236,6 +237,17 @@ def write_station_details(client, selected_station):
 
     st.altair_chart(layer_live, use_container_width=True)
 
+def get_weather_for_station(lat, lon):
+    api_url = ( f"https://api.open-meteo.com/v1/forecast?"
+                f"latitude={lat}&longitude={lon}&hourly=temperature_2m,precipitation,rain&"
+                f"past_days=2&forecast_days=1&models=meteofrance_seamless"
+    )
+
+    rain_json = requests.get(api_url).json()["hourly"]
+    # df_rain = pd.read_csv(io.StringIO(rain_json.text))
+    df_rain = pd.DataFrame.from_dict(rain_json)
+    return df_rain
+
 
 def create_main_page():
     st.set_page_config(layout="wide")
@@ -273,9 +285,32 @@ def create_main_page():
         if selected_station:
             write_station_details(client, selected_station)
 
+        if st.button('get weather'):
+            chosen_station = df.loc[df["code_station"] == selected_station]
+            weather_df = get_weather_for_station(
+                                    chosen_station["latitude"].item(),
+                                    chosen_station["longitude"].item()
+                                    )
+            weather_chart = (
+                alt.Chart(
+                    data=weather_df,
+                    title="Recent weather",
+                    )
+                    .mark_area()
+                    .encode(
+                        # day and time (hours minutes)
+                        x=alt.X("time:T", axis=alt.Axis(title="Date", format="%b %d %H:%M")),
+                        y=alt.Y("rain:Q", axis=alt.Axis(title="Rain")),
+                    )
+                    .properties(height=400)
+
+            )
+            st.altair_chart(weather_chart)
+
     if auto_refresh:
         time.sleep(20)
         st.rerun()
+
 
 
 if __name__ == "__main__":
