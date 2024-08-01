@@ -94,14 +94,14 @@ def get_map(df):
 
 
         color = mcolors.to_hex(cmap(norm(flood_indicateur)))
-        radius = 10+0*flood_indicateur
+        radius = 10*flood_indicateur+5
         folium.CircleMarker(
             location=[df.iloc[i]["latitude_station"], df.iloc[i]["longitude_station"]],
             radius=radius,
             # color="green",
             # weight=50,
             # opacity=0.05,
-            fill_opacity=0.20,
+            fill_opacity=0.75*flood_indicateur + 0.25,
             fill_color=color,
             # icon=folium.Icon(
             # icon="flag",
