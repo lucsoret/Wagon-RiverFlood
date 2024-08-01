@@ -1,11 +1,20 @@
 from datetime import datetime
 from timeit import default_timer as timer
 
+import numpy as np
 import altair as alt
 import folium
 import pandas as pd
 import streamlit as st
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+
 from streamlit_folium import st_folium
+from shapely.geometry import box
+from shapely.affinity import scale
+
+import geopandas as gpd
+from geopandas.tools import sjoin
 
 from gcp import get_service_account_credentials, get_client
 
@@ -48,6 +57,7 @@ def get_live_stations(_client):
                     quantile_990,
                     quantile_900,
                     quantile_001,
+                    TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), date_obs, SECOND) AS seconds_since_observation
             from river_observation_prod.hubeau_indicator_latest indicators
                 join river_observation_prod.d_hubeau_stations stations
                     on indicators.code_station = stations.code_station
@@ -66,31 +76,33 @@ def get_map(df):
         zoom_control=True,
         scrollWheelZoom=False
     )
-
+    # Initialize Matplotlib colormap
+    cmap = plt.get_cmap('RdYlBu_r')
+    norm = mcolors.Normalize(vmin=0, vmax=1)
+    th_opacity = 60*60
     for i in range(0, len(df)):
-        quantile_999 = df.iloc[i]["quantile_999"]
-        quantile_990 = df.iloc[i]["quantile_990"]
-        quantile_900 = df.iloc[i]["quantile_900"]
-        quantile_001 = df.iloc[i]["quantile_001"]
-        resultat_obs = df.iloc[i]["resultat_obs"]
 
-        flood_indicateur = (
-                                   resultat_obs / quantile_990) / 10  # to match what we said on the bottom regarding quantiles being divided by 10
+
+        flood_indicateur = df.iloc[i]["flood_indicateur"]
+
+        seconds_since_observation = df.iloc[i]["seconds_since_observation"]
+        clipped_value = max(0, min(seconds_since_observation, th_opacity))
+        fill_opacity = 1 - (clipped_value / th_opacity)
 
         if flood_indicateur == 0:
             continue
 
-        color = "red" if flood_indicateur > 1 else "blue"
 
-        radius = flood_indicateur * 20 if flood_indicateur > 1 else flood_indicateur
+        color = mcolors.to_hex(cmap(norm(flood_indicateur)))
+        radius = 10+0*flood_indicateur
         folium.CircleMarker(
             location=[df.iloc[i]["latitude_station"], df.iloc[i]["longitude_station"]],
             radius=radius,
             # color="green",
             # weight=50,
             # opacity=0.05,
-            fill_opacity=0.2,
-            fill_color=(color),
+            fill_opacity=fill_opacity,
+            fill_color=color,
             # icon=folium.Icon(
             # icon="flag",
             fill=True,
@@ -101,6 +113,88 @@ def get_map(df):
 
     return locs_map
 
+def get_map_grid(df):
+    # Create the map centered on a specific location
+    locs_map = folium.Map(
+        location=[46.856614, 2.3522219],
+        zoom_start=6, tiles="cartodbpositron",
+        zoom_control=True,
+        scrollWheelZoom=False
+    )
+
+    # Initialize Matplotlib colormap
+    cmap = plt.get_cmap('RdYlBu_r')
+    norm = mcolors.Normalize(vmin=0, vmax=1)
+
+    # Define the grid size in degrees (latitude and longitude)
+    grid_size = 0.20
+
+    # Calculate grid cell bounds
+    min_lat = df['latitude_station'].min()
+    max_lat = df['latitude_station'].max()
+    min_lon = df['longitude_station'].min()
+    max_lon = df['longitude_station'].max()
+
+    # Create a DataFrame for grid cells
+    lat_edges = np.arange(min_lat, max_lat + grid_size, grid_size)
+    lon_edges = np.arange(min_lon, max_lon + grid_size, grid_size)
+
+    grid_cells = []
+    for lat_min, lat_max in zip(lat_edges[:-1], lat_edges[1:]):
+        for lon_min, lon_max in zip(lon_edges[:-1], lon_edges[1:]):
+            grid_cells.append({
+                'lat_min': lat_min,
+                'lat_max': lat_max,
+                'lon_min': lon_min,
+                'lon_max': lon_max
+            })
+
+    grid_df = pd.DataFrame(grid_cells)
+    grid_gdf = gpd.GeoDataFrame(
+        grid_df,
+        geometry=[box(row['lon_min'], row['lat_min'], row['lon_max'], row['lat_max']) for _, row in grid_df.iterrows()],
+        crs='EPSG:4326'
+    )
+
+    # Convert the original DataFrame to a GeoDataFrame
+    df_gdf = gpd.GeoDataFrame(
+        df,
+        geometry=gpd.points_from_xy(df['longitude_station'], df['latitude_station']),
+        crs='EPSG:4326'
+    )
+
+    # Perform spatial join to find which grid cell each point belongs to
+    joined_gdf = sjoin(df_gdf, grid_gdf, how='inner', predicate='within')
+
+    # Calculate mean flood_indicateur for each grid cell
+    mean_floods = joined_gdf.groupby('index_right')['flood_indicateur'].mean().reset_index()
+    mean_floods = mean_floods.rename(columns={'index_right': 'grid_cell_index'})
+
+    # Merge with the grid cells DataFrame
+    grid_gdf = grid_gdf.reset_index().merge(mean_floods, left_index=True, right_on='grid_cell_index', how='left')
+
+    # Plot each grid cell on the map
+    for _, cell in grid_gdf.iterrows():
+        mean_flood = cell['flood_indicateur']
+        if pd.isna(mean_flood) or mean_flood <= 0:
+            continue
+
+        # Determine the color based on the mean flood_indicateur
+        color = mcolors.to_hex(cmap(norm(mean_flood)))
+
+        # Create a polygon for the grid cell
+        folium.Rectangle(
+            bounds=[
+                [cell['lat_min'], cell['lon_min']],
+                [cell['lat_max'], cell['lon_max']]
+            ],
+            color=color,
+            fill=True,
+            fill_opacity=0.6,
+            fill_color=color
+        ).add_to(locs_map)
+
+    return locs_map
 
 def create_main_page():
     st.logo("dashboards/images/BlueRiver.png")
@@ -117,10 +211,12 @@ def create_main_page():
     st.write(live_df)
 
     df = get_live_stations(client)
+    second_start = timer()
     locs_map = get_map(df)
     st_data = st_folium(locs_map, width=725)
     end_time = timer()
     st.write(f"this took {end_time - start_time}")
+    st.write(f"Compute the upper map took {end_time - second_start}")
 
     selected_station = st_data.get("last_object_clicked_popup")
     if selected_station:
