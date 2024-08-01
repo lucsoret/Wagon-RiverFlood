@@ -257,10 +257,9 @@ def write_station_details(client, selected_station):
     """
 
     df_indicator = client.query(latest_station_indicator_query).to_dataframe()
-    quantile999 = df_indicator["quantile_999"][0] * 10
-    quantile990 = df_indicator["quantile_990"][0] * 10
-    quantile900 = df_indicator["quantile_900"][
-                      0] * 10  # We've multiply this by 10 because indicators_latest had it divided by 10
+    quantile999 = df_indicator["quantile_999"][0]
+    quantile990 = df_indicator["quantile_990"][0]
+    quantile900 = df_indicator["quantile_900"][0]
 
     line_q_p999 = (
         alt.Chart(
