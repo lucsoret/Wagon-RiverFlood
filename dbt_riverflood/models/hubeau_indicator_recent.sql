@@ -5,6 +5,8 @@
 
 WITH latest_metric AS (
   SELECT
+    hsilver.longitude,
+    hsilver.latitude,
     lsilver.code_station,
     lsilver.date_obs,
     lsilver.resultat_obs,
@@ -31,6 +33,8 @@ SELECT
     WHEN resultat_obs < quantile_010 then 0
     else (resultat_obs - quantile_010) / (quantile_990 - quantile_010)
   end as flood_indicateur,
+  longitude,
+  latitude,
   date_obs,
   resultat_obs,
   code_station,
@@ -42,3 +46,6 @@ SELECT
   quantile_001,
 FROM
   latest_metric
+where
+  latitude between 41 and 52
+and longitude between -5 and 9
