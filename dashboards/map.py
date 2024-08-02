@@ -44,7 +44,8 @@ def get_map(df, quantile):
         prefer_canvas=True
     )
 
-    df['flood_indicateur'] = (df['resultat_obs'] / df[quantile])
+    df['flood_indicateur'] = (df['resultat_obs'] / df[quantile]).clip(
+        lower=0, upper=5)
     df = df[df['flood_indicateur'] > 0]
 
     for i in range(0, len(df)):
@@ -52,17 +53,16 @@ def get_map(df, quantile):
         cmap = plt.get_cmap('RdYlBu_r')
         norm = mcolors.Normalize(vmin=0, vmax=1)
         color = mcolors.to_hex(cmap(norm(flood_indicateur)))
-        R = 3
-        S = 4
-        coef = 1 if flood_indicateur < 1 else 1.5
-        radius = R + coef * S * flood_indicateur
+        R = 2
+        S = 8
+        radius = min(50, R + S * flood_indicateur)
         folium.CircleMarker(
             location=[df.iloc[i]["latitude"], df.iloc[i]["longitude"]],
             radius=radius,
             # color="green",
             # weight=50,
             # opacity=0.05,
-            fill_opacity=0.5,
+            fill_opacity=0.4,
             fill_color=(color),
             # icon=folium.Icon(
             # icon="flag",
