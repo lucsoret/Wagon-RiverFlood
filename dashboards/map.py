@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
 import io
+from datetime import datetime
 
 from gcp import get_service_account_credentials, get_client
 
@@ -243,8 +244,10 @@ def get_weather_for_station(lat, lon):
                 f"past_days=2&forecast_days=1&models=meteofrance_seamless"
     )
 
+    # st.write(api_url)
     rain_json = requests.get(api_url).json()["hourly"]
     # df_rain = pd.read_csv(io.StringIO(rain_json.text))
+    # rain_json
     df_rain = pd.DataFrame.from_dict(rain_json)
     return df_rain
 
@@ -285,27 +288,107 @@ def create_main_page():
         if selected_station:
             write_station_details(client, selected_station)
 
-        if st.button('get weather'):
+        if st.button('get live weather'):
             chosen_station = df.loc[df["code_station"] == selected_station]
             weather_df = get_weather_for_station(
-                                    chosen_station["latitude"].item(),
-                                    chosen_station["longitude"].item()
+                                    chosen_station["latitude"].values[0],
+                                    chosen_station["longitude"].values[0]
                                     )
-            weather_chart = (
-                alt.Chart(
-                    data=weather_df,
-                    title="Recent weather",
-                    )
-                    .mark_area()
-                    .encode(
-                        # day and time (hours minutes)
-                        x=alt.X("time:T", axis=alt.Axis(title="Date", format="%b %d %H:%M")),
-                        y=alt.Y("rain:Q", axis=alt.Axis(title="Rain")),
-                    )
-                    .properties(height=400)
 
+            rain_bar = (
+                        alt.Chart(
+                        data=weather_df,
+                        title="Recent and forecasted weather",
+                        )
+                        .mark_bar(
+                            color="LightBlue"
+                        )
+                        .encode(
+                            # day and time (hours minutes)
+                            x=alt.X("time:T", axis=alt.Axis(title = "", format="%b %d %H:%M")),
+                            y=alt.Y("rain:Q", axis=alt.Axis(title ='Rain, Precipitation(mm)')),
+                        )
+                        .properties(height=400)
             )
-            st.altair_chart(weather_chart)
+            temp_line = (
+                        alt.Chart(
+                        data=weather_df
+                        )
+                        .mark_line(
+                            point=True,
+                            color='Turquoise',
+                        )
+                        .encode(
+                            x=alt.X("time:T"),
+                            y=alt.Y("temperature_2m:Q", axis=alt.Axis(title = "Temp °C")),
+                        )
+            )
+            precip_bar = (
+                        alt.Chart(
+                        data=weather_df,
+                        )
+                        .mark_bar(
+                            color="green"
+                        )
+                        .encode(
+                            # day and time (hours minutes)
+                            x=alt.X("time:T"),
+                            y=alt.Y("precipitation:Q"),
+                        )
+                        .properties(height=400)
+            )
+            precips = rain_bar + precip_bar
+
+
+
+            rule1 =     (
+                        alt.Chart(
+                            data = pd.DataFrame({'Today': [datetime.today()]})
+                        )
+                        .mark_rule(
+                            color = 'red',
+                            strokeWidth = 5,
+                            strokeDash=[10, 4]
+                        )
+                        .encode(
+                            x=alt.X("Today:T")
+                        )
+            )
+
+            rule1_txt = (
+                        alt.Chart(
+                            data = pd.DataFrame({'Today': [datetime.today()]})
+                        )
+                        .mark_text(
+                            text='This is now',
+                            dx=0, dy=20,
+                            color='red', fontSize=20, angle=90)
+                        .encode(
+                            x=alt.X("Today:T")
+                        )
+            )
+
+
+            weather_chart = (
+                        alt.layer(
+                            precips,
+                            temp_line,
+                            rule1,
+                            rule1_txt
+                        )
+                        .configure_axis(
+                            labelFontSize=19,
+                            titleFontSize=30,
+                        )
+                        .configure_title(
+                        fontSize=30
+                        )
+                        .resolve_scale(
+                            y='independent'
+                        )
+            )
+
+            st.altair_chart(weather_chart, use_container_width=True)
 
     if auto_refresh:
         time.sleep(20)
