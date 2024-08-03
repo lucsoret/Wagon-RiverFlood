@@ -44,7 +44,8 @@ def get_map(df, quantile):
         prefer_canvas=True
     )
 
-    df['flood_indicateur'] = df['resultat_obs'] / df[quantile]
+    df['flood_indicateur'] = (df['resultat_obs'] / df[quantile]).clip(
+        lower=0, upper=5)
     df = df[df['flood_indicateur'] > 0]
 
     for i in range(0, len(df)):
@@ -54,10 +55,12 @@ def get_map(df, quantile):
         norm = mcolors.Normalize(vmin=0, vmax=1)
         color = mcolors.to_hex(cmap(norm(flood_indicateur)))
 
-        radius = flood_indicateur * 2 if flood_indicateur > 1 else flood_indicateur * 5
+        R = 2
+        S = 15
+        radius = min(50, R + S * flood_indicateur)
         folium.CircleMarker(
             location=[df.iloc[i]["latitude"], df.iloc[i]["longitude"]],
-            radius=radius * 6,
+            radius=radius,
             # color="green",
             # weight=50,
             # opacity=0.05,
@@ -238,20 +241,19 @@ def write_station_details(client, selected_station):
 
 
 def create_main_page():
-    st.set_page_config(layout="wide")
+    st.set_page_config(layout="wide", initial_sidebar_state='collapsed')
 
     st.logo("dashboards/images/BlueRiver.png")
-    start_time = timer()
     credentials = get_service_account_credentials()
     client = get_client(credentials)
-    st.title("River flood")
+    st.title("Live river flood monitoring")
 
     auto_refresh = st.sidebar.checkbox("Auto refresh", value=False)
     st.sidebar.write("Last refresh time:",
                      f'{st.session_state.last_refresh_time if "last_refresh_time" in st.session_state else "never"}')
 
     quantile = st.radio(
-        label="Select a quantile",
+        label="Filter by a quantile (historical flood data) :",
         options=["quantile_999", "quantile_990", "quantile_900"],
         # quantile_999 transforms to "Top 99.9%"
         format_func=lambda x: f"Top {int(x.split('_')[1]) / 10}%",
